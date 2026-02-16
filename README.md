@@ -1,6 +1,6 @@
-# Vision Textile Inspection
+# Vision Textile Inspection pullers
 
-A computer vision-based fabric inspection system using deep learning for automated defect detection in textiles.
+A computer vision-based fabric inspection system using deep learning for inspect the qualities in textiles like stitch length and the seam allowance.
 
 ![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
