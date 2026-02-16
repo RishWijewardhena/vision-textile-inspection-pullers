@@ -143,13 +143,11 @@ See `requirements.txt` for the full list of dependencies with version specificat
 
 ## Model Information
 
-The project uses a YOLOv8 medium segmentation model (`best_Model.pt`) trained specifically for textile defect detection. The model can identify and segment various types of fabric defects including:
+The project uses a YOLOv8 medium segmentation model (`best_Model.pt`) trained specifically for detect the edge of the garment and the stitches of the garment. The model can identify and segment various types of fabric defects including:
 
-- Holes and tears
-- Stains and discoloration
-- Thread irregularities
-- Pattern defects
-- Other manufacturing flaws
+- Stitches
+- Marker which toches the garment edge
+
 
 ## Contributing
 
