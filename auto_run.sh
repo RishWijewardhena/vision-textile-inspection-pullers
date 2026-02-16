@@ -25,7 +25,7 @@ PROJECT_DIR="$HOME_DIR/Desktop/THREAD"
 VENV_DIR="$PROJECT_DIR/venv"
 AUTO_RUNNER="$PROJECT_DIR/auto_runner.sh"
 SERVICE_PATH="/etc/systemd/system/Thread.service"
-REPO_URL="https://github.com/RishWijewardhena/vision-textile-inspection.git"
+REPO_URL="https://github.com/RishWijewardhena/vision-textile-inspection-pullers.git"
 SOURCE_ENV="$(dirname "$(readlink -f "$0")")/.env"
 BRANCH="main"
 
