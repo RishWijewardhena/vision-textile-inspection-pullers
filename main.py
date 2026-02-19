@@ -84,7 +84,7 @@ def main():
             frame_buffer=FRAME_BUFFER,
             min_stitches=MIN_STITCHES,
             stitch_id=STITCH_CLASS_ID,
-            fabric_id=FABRIC_CLASS_ID
+            marker_id=MARKER_CLASS_ID
         )
         print("✅ Measurement app initialized")
         
