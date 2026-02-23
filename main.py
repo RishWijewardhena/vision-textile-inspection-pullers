@@ -9,45 +9,11 @@ from datetime import datetime
 
 # Import all modules
 from config import *
-from calibration import run_extrinsic_calibration, create_charuco_board
 from serial_reader import SerialReader
 from database import DatabaseHandler
 from measurement import StitchMeasurementApp   
 from file_cleaner import FileCleanerThread
-
-# MQTT heartbeat thread (create this file: mqtt_heartbeat.py)
 from mqtt_heartbeat import MqttHeartbeat
-
-
-def run_startup_calibration():
-    """Run extrinsic calibration at startup  """
-    print("\n" + "="*60)
-    print("SYSTEM STARTUP - EXTRINSIC CALIBRATION")
-    print("="*60)
-    
-    board, detector = create_charuco_board()
-    success = run_extrinsic_calibration(board, detector)
-
-    if success:
-        print("\n✅ CALIBRATION COMPLETE")
-        cv2.destroyAllWindows()  # Ensure calibration window is closed
-        cv2.waitKey(1)
-        return True
-
-    # Fallback: keep working with existing extrinsics if available
-    elif not success and os.path.exists(EXTRINSICS_FILE):
-        print("\n⚠️ Calibration failed, using existing extrinsics file:", EXTRINSICS_FILE)
-        cv2.destroyAllWindows()  # Ensure calibration window is closed
-        cv2.waitKey(1)
-        return True
-    
-    else:
-        print("\n❌ CALIBRATION FAILED - Cannot continue without extrinsics")
-        print("Please ensure:")
-        print("  1. ChArUco board is visible to camera")
-        print("  2. Lighting is adequate")
-        print("  3. Board is on the measurement plane")
-        return False
 
 
 def main():
@@ -55,25 +21,21 @@ def main():
     print("\n" + "="*60)
     print("🧵 STITCH MEASUREMENT SYSTEM")
     print("="*60)
-    
-    # Step 1: Run calibration
-    try:
-        calibrated = run_startup_calibration()
-        if not calibrated:
-            sys.exit(1) # Exit if calibration failed
 
-    except Exception as e:
-        
-        print(f"\n❌ Calibration error: {e}")
+    # Check calibration files exist
+    if not os.path.exists(INTRINSICS_FILE):
+        print(f"❌ Missing calibration file: {INTRINSICS_FILE}")
         sys.exit(1)
+    if not os.path.exists(EXTRINSICS_FILE):
+        print(f"❌ Missing extrinsics file: {EXTRINSICS_FILE}")
+        sys.exit(1)
+
+    print("✅ Calibration files found")
     
-    time.sleep(1)  # Brief pause after calibration
-    
-    # Step 2: Initialize all components
+    # Step 1: Initialize all components
     print("\n📡 Initializing components...")
     
     try:
-        # Initialize measurement app
         measurement_app = StitchMeasurementApp(
             calib_path=INTRINSICS_FILE,
             extr_path=EXTRINSICS_FILE,
@@ -106,16 +68,13 @@ def main():
         print("⚠️ Serial connection failed - continuing without serial data")
         serial_reader = None
     
-    #initialize file cleaner
-    file_cleaner=FileCleanerThread()
+    # Initialize file cleaner
+    file_cleaner = FileCleanerThread()
     file_cleaner.start()
-
 
     # Initialize MQTT heartbeat
     heartbeat = None
     try:
-        # Use MQTT constants from config.py if you added them,
-
         heartbeat = MqttHeartbeat(
             broker=MQTT_SERVER,
             port=MQTT_PORT,
@@ -130,15 +89,13 @@ def main():
     except Exception as e:
         print(f"⚠️ MQTT heartbeat not started: {e} (continuing without heartbeat)")
 
-
-
     print("\n" + "="*60)
     print("🎯 SYSTEM READY - Starting measurements")
     print("="*60)
     print("Press 'q' to quit")
     print("="*60 + "\n")
     
-    # Step 3: Main measurement loop
+    # Step 2: Main measurement loop
     last_inference_time = 0
     frame_count = 0
     last_stitch_count = 0
@@ -155,22 +112,14 @@ def main():
             
             current_time = time.time()
             
-            # Process frame at intervals
             if current_time - last_inference_time >= INFERENCE_INTERVAL:
-                # Get measurements from vision system
                 annotated, measurements = measurement_app.process_frame(frame)
                 
-                # Get stitch count from serial
                 current_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
 
-              
-                
-                # Calculate total distance
-                # measurements is a dict with keys: edge_distance_mm, stitch_width_mm, stitch_count, timestamp
-                seam_length_mm = measurements.get('edge_distance_mm', None)  # top_distance
+                seam_length_mm = measurements.get('edge_distance_mm', None)
                 stitch_width_mm = measurements.get('stitch_width_mm', None)
 
-                # Calculate movement since last measurement
                 if stitch_width_mm is not None:
                     stitch_delta = current_stitch_count - last_stitch_count
                     moved_distance_mm = stitch_delta * stitch_width_mm
@@ -178,17 +127,13 @@ def main():
                     last_stitch_count = current_stitch_count
                 
                 if seam_length_mm is not None and current_stitch_count > 0 and stitch_width_mm is not None:
-                    
-                    
-                    # Insert to database
-                    if db and stitch_delta > 0: #only log if there's a new rotation
+                    if db and stitch_delta > 0:
                         db.insert_measurement(
                             total_distance=total_distance_mm,
                             stitch_length=stitch_width_mm,
                             seam_allowance=seam_length_mm,
                         )
                     
-                    # Display info on frame
                     info_text = (f"Count: {current_stitch_count} | Count_delta: {stitch_delta} | Moved: {moved_distance_mm:.2f}mm | "
                                f"Total: {total_distance_mm:.2f}mm | Seam: {seam_length_mm:.2f}mm")
                     if stitch_width_mm:
@@ -196,14 +141,11 @@ def main():
                     
                     cv2.putText(annotated, info_text, (10, annotated.shape[0] - 40), 
                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-                    
                     print(f"📏 {info_text}")
                 else:
-                    # No valid measurements
                     cv2.putText(annotated, f"Stitch count: {current_stitch_count} (waiting for measurements)", 
                               (10, annotated.shape[0] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
                 
-                # Save annotated image
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 save_path = os.path.join(SAVE_DIR, f"frame_{frame_count:05d}_{timestamp}.jpg")
                 cv2.imwrite(save_path, annotated)
@@ -213,11 +155,9 @@ def main():
                 last_inference_time = current_time
                 frame_count += 1
             else:
-                # Display live feed without processing
                 if SHOW_WINDOWS:
                     cv2.imshow("Stitch Measurement System", frame)
             
-            # Handle keyboard input
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
                 print("\n🛑 Shutdown requested by user")
@@ -227,17 +167,16 @@ def main():
         print("\n🛑 Interrupted by user")
     
     finally:
-        # Step 4: Cleanup
         print("\n🧹 Cleaning up...")
         
         if serial_reader:
             serial_reader.stop()
-        
         if db:
             db.close()
+        if heartbeat:
+            heartbeat.stop()
 
-        file_cleaner.stop() #stop file cleaner thread
-        
+        file_cleaner.stop()
         measurement_app.cap.release()
         cv2.destroyAllWindows()
         
