@@ -148,14 +148,19 @@ class StitchMeasurementApp:
         cv2.putText(annotated, "ROI", (10, roi_y_min + 18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
-        stitch_masks, stitch_boxes, marker_masks = [], [], []
+        stitch_masks, stitch_boxes = [], []
+        best_marker_mask = None
+        best_marker_y = float('inf')
+        best_marker_box = None
+        marker_count = 0
 
         if hasattr(r, "boxes") and r.boxes is not None:
             try:
-                cls_arr = r.boxes.cls.cpu().numpy()
-                boxes   = r.boxes.xyxy.cpu().numpy()
+                cls_arr  = r.boxes.cls.cpu().numpy()
+                conf_arr = r.boxes.conf.cpu().numpy()
+                boxes    = r.boxes.xyxy.cpu().numpy()
             except Exception:
-                cls_arr, boxes = [], []
+                cls_arr, conf_arr, boxes = [], [], []
 
             for i, cls_id in enumerate(cls_arr):
                 cid = int(cls_id)
@@ -169,26 +174,26 @@ class StitchMeasurementApp:
                         stitch_masks.append(mask)
                         stitch_boxes.append((x1, y1, x2, y2))
                         cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 255, 0), 1)
-                    else:
-                        cv2.rectangle(annotated, (x1, y1), (x2, y2), (100, 100, 100), 1)
+                    # Stitches outside the ROI are not annotated
 
                 elif cid == self.marker_id:
-                    if mask is not None:
-                        marker_masks.append(mask)
-                    cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 0, 255), 2)
+                    cy_bbox = (y1 + y2) / 2.0
+                    if mask is not None and cy_bbox < best_marker_y:
+                        best_marker_y = cy_bbox
+                        best_marker_mask = mask
+                        best_marker_box = (x1, y1, x2, y2)
+                    marker_count += 1
+        
+        # Draw only the best marker (topmost/lowest y-value)
+        if best_marker_box is not None:
+            x1, y1, x2, y2 = best_marker_box
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 0, 255), 2)
 
         if LOG_DEBUG:
-            print(f"Stitches in ROI: {len(stitch_masks)}, Markers: {len(marker_masks)}")
+            print(f"Stitches in ROI: {len(stitch_masks)}, Markers detected: {marker_count}, Best y: {best_marker_y:.1f}")
 
-        # Combine marker masks
-        marker_combined = None
-        if marker_masks:
-            combined = np.zeros((h, w), dtype=np.uint8)
-            for m in marker_masks:
-                if m is not None and m.shape == (h, w):
-                    combined = cv2.bitwise_or(combined, m)
-            if np.count_nonzero(combined) > 0:
-                marker_combined = combined
+        # Use only the topmost marker mask
+        marker_combined = best_marker_mask if (best_marker_mask is not None and np.count_nonzero(best_marker_mask) > 0) else None
 
         if marker_combined is None:
             cv2.putText(annotated, "Marker is not detected", (10, 55),
@@ -316,7 +321,7 @@ class StitchMeasurementApp:
             info = f"Insufficient stitches (found {n_found}, need {self.min_stitches})"
 
         cv2.putText(annotated, info, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(annotated, f"Stitches: {n_found} | Markers: {len(marker_masks)}",
+        cv2.putText(annotated, f"Stitches: {n_found} | Markers: {marker_count}",
                     (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
         return annotated, {
