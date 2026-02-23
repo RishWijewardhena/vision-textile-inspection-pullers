@@ -47,10 +47,10 @@ CAMERA_EXPOSURE = 3.5 # Manual exposure: -10 (darkest) to -4 (brightest). Adjust
 # -------------------------
 # YOLO Model Config
 # -------------------------
-MODEL_PATH = "yolov8s_pullers-seg.pt"
+MODEL_PATH = "Utils/yolov11_s_pullers.pt"
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
-CONF_THRESH = 0.20
+CONF_THRESH = 0.45
 IOU_THRESH = 0.45 # measures the overlap between two bounding boxes (0 = no overlap, 1 = perfect overlap)
 MAX_DETECTIONS = 200
 
@@ -61,7 +61,7 @@ FRAME_BUFFER = 8          # median filter across frames
 MIN_STITCHES = 3          # minimum stitches to compute average
 MAX_EDGE_CANDIDATES = 20  # number of nearest contour points to try per stitch
 MAX_PX_DISTANCE = 250    # max pixel distance between stitch centroid and fabric edge (reduced for tighter filtering)
-ENVELOPE_NEIGHBORHOOD = 3# columns around centroid to average envelope y
+ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y
 SKIP_CLUSTER = False      # if True, don't try to cluster into 2 stitch lines
 ROI_MARGIN_PX = 10        # pixels below marker far edge to include in ROI
 ROI_SECTIONS = 6          # divide frame height into this many equal parts
