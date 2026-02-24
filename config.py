@@ -64,9 +64,9 @@ MAX_PX_DISTANCE = 250    # max pixel distance between stitch centroid and fabric
 ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y
 SKIP_CLUSTER = False      # if True, don't try to cluster into 2 stitch lines
 ROI_MARGIN_PX = 10        # pixels below marker far edge to include in ROI
-ROI_SECTIONS = 6          # divide frame height into this many equal parts
-ROI_SECTION_START = 3     # 0-based index of first ROI section (4th section)
-ROI_SECTION_END = 4      # 0-based index of last ROI section exclusive (sections 4 and 5)
+ROI_SECTIONS = 5          # divide frame height into this many equal parts
+ROI_SECTION_START = 2     # 0-based index of first ROI section (4th section)
+ROI_SECTION_END = 4     # 0-based index of last ROI section exclusive (sections 4 and 5)
 
 # -------------------------
 # Serial Communication
