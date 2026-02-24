@@ -178,11 +178,12 @@ class StitchMeasurementApp:
 
                 elif cid == self.marker_id:
                     cy_bbox = (y1 + y2) / 2.0
-                    if mask is not None and cy_bbox < best_marker_y:
-                        best_marker_y = cy_bbox
-                        best_marker_mask = mask
-                        best_marker_box = (x1, y1, x2, y2)
-                    marker_count += 1
+                    if roi_y_min < cy_bbox < roi_y_max:
+                        if mask is not None and cy_bbox < best_marker_y:
+                            best_marker_y = cy_bbox
+                            best_marker_mask = mask
+                            best_marker_box = (x1, y1, x2, y2)
+                        marker_count += 1
         
         # Draw only the best marker (topmost/lowest y-value)
         if best_marker_box is not None:
