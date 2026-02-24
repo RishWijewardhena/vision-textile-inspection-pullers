@@ -88,9 +88,9 @@ CONFIDENCE = 0.45
 MASK_ALPHA = 0.5
 
 # Brightness config
-BRIGHTNESS_CHECK_INTERVAL = 120   # 2 minutes in seconds
-BRIGHTNESS_TOO_HIGH       = 180   # Max acceptable brightness (0-255)
-BRIGHTNESS_TOO_LOW        = 60    # Min acceptable brightness (0-255)
+BRIGHTNESS_CHECK_INTERVAL = 15   # 2 minutes in seconds
+BRIGHTNESS_TOO_HIGH       = 140   # Max acceptable brightness (0-255)
+BRIGHTNESS_TOO_LOW        = 40    # Min acceptable brightness (0-255)
 
 # Camera exposure controls (from v4l2-ctl)
 AUTO_EXPOSURE_MANUAL    = 1       # Manual mode
