@@ -59,7 +59,10 @@ def get_mask(result, idx, h, w):
         return None
 
 def marker_far_edge_envelope(marker_mask):
-    """Return topmost (far-from-camera) marker pixel y per column; -1 if absent."""
+    """Return topmost marker pixel y per column; -1 if absent.
+    Stitches sit ABOVE the marker (lower y). The marker's top edge
+    (smallest y = 'far edge') is the reference for seam allowance.
+    """
     has_any = marker_mask.any(axis=0)
     idx_top = np.argmax(marker_mask > 0, axis=0)
     return np.where(has_any, idx_top, -1).astype(int)
@@ -149,51 +152,54 @@ class StitchMeasurementApp:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
         stitch_masks, stitch_boxes = [], []
+        # Layout inside ROI:
+        #   top of ROI  (roi_y_min, smaller y) → stitches
+        #   bottom of ROI (roi_y_max, larger y) → marker
+        # So: stitches have LOWER y, marker has HIGHER y.
+        # Pick the marker with the LARGEST cy_bbox (deepest in ROI).
         best_marker_mask = None
-        best_marker_y = float('inf')
-        best_marker_box = None
-        marker_count = 0
+        best_marker_y    = float('-inf')   # want max y
+        best_marker_box  = None
+        marker_count     = 0
 
         if hasattr(r, "boxes") and r.boxes is not None:
             try:
-                cls_arr  = r.boxes.cls.cpu().numpy()
-                conf_arr = r.boxes.conf.cpu().numpy()
-                boxes    = r.boxes.xyxy.cpu().numpy()
+                cls_arr = r.boxes.cls.cpu().numpy()
+                boxes   = r.boxes.xyxy.cpu().numpy()
             except Exception:
-                cls_arr, conf_arr, boxes = [], [], []
+                cls_arr, boxes = [], []
 
             for i, cls_id in enumerate(cls_arr):
                 cid = int(cls_id)
                 x1, y1, x2, y2 = map(int, boxes[i])
+                cy_bbox = (y1 + y2) / 2.0
+
+                # Skip everything outside the ROI band
+                if not (roi_y_min < cy_bbox < roi_y_max):
+                    continue
+
                 mask = get_mask(r, i, h, w)
 
                 if cid == self.stitch_id:
-                    # Accept only stitches whose bbox centroid is inside the ROI band
-                    cy_bbox = (y1 + y2) / 2.0
-                    if roi_y_min < cy_bbox < roi_y_max:
-                        stitch_masks.append(mask)
-                        stitch_boxes.append((x1, y1, x2, y2))
-                        cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 255, 0), 1)
-                    # Stitches outside the ROI are not annotated
+                    stitch_masks.append(mask)
+                    stitch_boxes.append((x1, y1, x2, y2))
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 255, 0), 1)
 
                 elif cid == self.marker_id:
-                    cy_bbox = (y1 + y2) / 2.0
-                    if roi_y_min < cy_bbox < roi_y_max:
-                        if mask is not None and cy_bbox < best_marker_y:
-                            best_marker_y = cy_bbox
-                            best_marker_mask = mask
-                            best_marker_box = (x1, y1, x2, y2)
-                        marker_count += 1
-        
-        # Draw only the best marker (topmost/lowest y-value)
+                    marker_count += 1
+                    # Keep the marker sitting deepest in the ROI (largest y)
+                    if mask is not None and cy_bbox > best_marker_y:
+                        best_marker_y    = cy_bbox
+                        best_marker_mask = mask
+                        best_marker_box  = (x1, y1, x2, y2)
+
         if best_marker_box is not None:
             x1, y1, x2, y2 = best_marker_box
             cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 0, 255), 2)
 
         if LOG_DEBUG:
-            print(f"Stitches in ROI: {len(stitch_masks)}, Markers detected: {marker_count}, Best y: {best_marker_y:.1f}")
+            print(f"Stitches in ROI: {len(stitch_masks)} | Markers in ROI: {marker_count} | Best marker cy: {best_marker_y:.1f}")
 
-        # Use only the topmost marker mask
         marker_combined = best_marker_mask if (best_marker_mask is not None and np.count_nonzero(best_marker_mask) > 0) else None
 
         if marker_combined is None:
@@ -235,13 +241,33 @@ class StitchMeasurementApp:
 
         active_indices = list(range(len(stitch_masks)))
         if len(centroids_y) >= 2:
-            vals = np.array(centroids_y)
-            labels, (c0, c1) = kmeans_1d_two_clusters(vals)
-            # Pick the cluster with the higher mean y (lower in image = closer to marker)
-            chosen_label = 0 if c0 > c1 else 1
-            active_indices = [i for i, lab in enumerate(labels) if lab == chosen_label]
-            if LOG_DEBUG:
-                print(f"Clustering: c0={c0:.1f} c1={c1:.1f} → chose label {chosen_label} ({len(active_indices)} stitches)")
+            vals   = np.array(centroids_y)
+            spread = vals.max() - vals.min()
+            if spread > MIN_CLUSTER_SPREAD_PX:
+                labels, (c0, c1) = kmeans_1d_two_clusters(vals)
+                c0_mean = float(vals[labels == 0].mean()) if (labels == 0).any() else -1.0
+                c1_mean = float(vals[labels == 1].mean()) if (labels == 1).any() else -1.0
+                # Stitches are ABOVE marker (lower y). Among stitch rows pick the one
+                # with the LARGEST mean y — closest to the marker edge.
+                # Both clusters should be above the marker envelope.
+                env_mean_y = float(np.mean(envelope[envelope >= 0])) if (envelope >= 0).any() else roi_y_max
+                valid_c0 = 0 < c0_mean < env_mean_y
+                valid_c1 = 0 < c1_mean < env_mean_y
+                if valid_c0 and valid_c1:
+                    chosen_label = 0 if c0_mean > c1_mean else 1
+                elif valid_c0:
+                    chosen_label = 0
+                elif valid_c1:
+                    chosen_label = 1
+                else:
+                    chosen_label = 0 if c0_mean > c1_mean else 1
+                active_indices = [i for i, lab in enumerate(labels) if lab == chosen_label]
+                if LOG_DEBUG:
+                    print(f"Clustering: spread={spread:.1f}px c0={c0_mean:.1f} c1={c1_mean:.1f} "
+                          f"env={env_mean_y:.1f} → label {chosen_label} ({len(active_indices)} stitches)")
+            else:
+                if LOG_DEBUG:
+                    print(f"Single row (spread={spread:.1f}px < {MIN_CLUSTER_SPREAD_PX}px), using all stitches")
 
         # Measure each stitch in the selected row
         per_dists, per_widths = [], []
