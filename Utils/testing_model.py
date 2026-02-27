@@ -82,22 +82,23 @@ import time
 from ultralytics import YOLO
 
 # Config
-MODEL_PATH = "yolov11_s_pullers.pt"
+MODEL_PATH = "new_pullers_model.pt"
 CAMERA_INDEX = "/dev/video0"
 CONFIDENCE = 0.45
 MASK_ALPHA = 0.5
 
 # Brightness config
-BRIGHTNESS_CHECK_INTERVAL = 15   # 2 minutes in seconds
-BRIGHTNESS_TOO_HIGH       = 140   # Max acceptable brightness (0-255)
-BRIGHTNESS_TOO_LOW        = 40    # Min acceptable brightness (0-255)
+BRIGHTNESS_CHECK_INTERVAL = 5 
+ # 2 minutes in seconds
+BRIGHTNESS_TOO_HIGH       = 110   # Max acceptable brightness (0-255)
+BRIGHTNESS_TOO_LOW        = 20    # Min acceptable brightness (0-255)
 
 # Camera exposure controls (from v4l2-ctl)
 AUTO_EXPOSURE_MANUAL    = 1       # Manual mode
 AUTO_EXPOSURE_AUTO      = 3       # Aperture Priority Mode (default)
 EXPOSURE_MIN            = 50      # min from v4l2-ctl
 EXPOSURE_MAX            = 10000   # max from v4l2-ctl
-EXPOSURE_DEFAULT        = 166     # default from v4l2-ctl
+EXPOSURE_DEFAULT        = 120     # default from v4l2-ctl
 EXPOSURE_STEP           = 50      # How much to increase/decrease per adjustment
 
 
