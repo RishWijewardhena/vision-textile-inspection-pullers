@@ -59,8 +59,21 @@ def main():
     if not db.connect():
         print("❌ Database connection failed - continuing without DB")
         db = None
-    else:
-        db.ensure_table_exists()
+
+    # reset the total distance in the database to 0 at startup
+    if db:
+        last_date=db.get_last_record_date()
+        today=datetime.now().date()
+        if last_date is not None and last_date!=today:
+            db.insert_measurement(
+                total_distance=0.0,
+                stitch_length=0.0,
+                seam_allowance=0.0,
+            )
+            print("🔄 New day detected - total distance reset to 0 in database")
+        else:
+            print(f"📊 Total distance continues from last measurement in database: {last_date}")
+
     
     # Initialize serial reader
     serial_reader = SerialReader()
