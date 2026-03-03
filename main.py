@@ -6,6 +6,7 @@ import sys
 import time
 import cv2
 from datetime import datetime
+from collections import deque
 
 # Import all modules
 from config import *
@@ -114,6 +115,12 @@ def main():
     last_stitch_count = 0
     total_distance_mm = 0.0
     os.makedirs(SAVE_DIR, exist_ok=True)
+
+    
+    # Buffer for last 5 valid measurements
+    valid_seam_buffer = deque(maxlen=5)
+    valid_width_buffer = deque(maxlen=5)
+
     
     try:
         while True:
@@ -138,9 +145,44 @@ def main():
                     moved_distance_mm = stitch_delta * stitch_width_mm
                     total_distance_mm += moved_distance_mm
                     last_stitch_count = current_stitch_count
+
+                # Determine if this is a valid measurement
+                has_valid_measurement = (seam_length_mm is not None and stitch_width_mm is not None)
+
                 
-                if seam_length_mm is not None and current_stitch_count > 0 and stitch_width_mm is not None:
-                    if db and stitch_delta > 0:
+                # If valid, save to buffer
+                if has_valid_measurement:
+                    valid_seam_buffer.append(seam_length_mm)
+                    valid_width_buffer.append(stitch_width_mm)
+                    if LOG_DEBUG:
+                        print(f"📦 Buffered measurement: seam={seam_length_mm:.2f}mm, width={stitch_width_mm:.2f}mm "
+                              f"(buffer size: {len(valid_seam_buffer)}/5)")
+
+                else:
+                    # No valid measurement — use average of last 5 if available
+                    if len(valid_seam_buffer) > 0 and len(valid_width_buffer) > 0:
+                        seam_length_mm = sum(valid_seam_buffer) / len(valid_seam_buffer)
+                        stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)
+                        has_valid_measurement = True
+                        if LOG_DEBUG:
+                            print(f"📊 Using buffered average: seam={seam_length_mm:.2f}mm, "
+                                  f"width={stitch_width_mm:.2f}mm (from {len(valid_seam_buffer)} samples)")
+                    else:
+                        if LOG_DEBUG:
+                            print("⚠️ No valid measurement and buffer is empty — skipping DB update")
+
+
+                # Calculate movement since last measurement
+                if stitch_width_mm is not None:
+                    stitch_delta = current_stitch_count - last_stitch_count
+                    moved_distance_mm = stitch_delta * stitch_width_mm
+                    total_distance_mm += moved_distance_mm
+                    last_stitch_count = current_stitch_count
+                
+                if has_valid_measurement and current_stitch_count > 0:
+                    
+                    # Insert to database
+                    if db and stitch_delta > 0: #only log if there's a new rotation
                         db.insert_measurement(
                             total_distance=total_distance_mm,
                             stitch_length=stitch_width_mm,
