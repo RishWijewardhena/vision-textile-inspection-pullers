@@ -134,7 +134,7 @@ class StitchMeasurementApp:
         try:
             results = self.model.predict(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
                                          verbose=False, conf=CONF_THRESH,
-                                         iou=IOU_THRESH, max_det=MAX_DETECTIONS)
+                                         iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS)
             r = results[0]
         except Exception as e:
             print("Model inference error:", e)

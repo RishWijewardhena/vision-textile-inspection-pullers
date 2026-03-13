@@ -44,7 +44,7 @@ CAMERA_EXPOSURE = 3.5 # Manual exposure: -10 (darkest) to -4 (brightest). Adjust
 # -------------------------
 # YOLO Model Config
 # -------------------------
-MODEL_PATH = "Utils/new_pullers_model.pt"
+MODEL_PATH = "Utils/best_puller.pt"
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
 CONF_THRESH = 0.45
