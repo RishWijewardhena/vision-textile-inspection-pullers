@@ -47,7 +47,7 @@ CAMERA_EXPOSURE = 3.5 # Manual exposure: -10 (darkest) to -4 (brightest). Adjust
 MODEL_PATH = "Utils/best_puller.pt"
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
-CONF_THRESH = 0.45
+CONF_THRESH = 0.2
 IOU_THRESH = 0.45 # measures the overlap between two bounding boxes (0 = no overlap, 1 = perfect overlap)
 MAX_DETECTIONS = 50 # max detections per frame to consider (to prevent outliers from overwhelming the system)
 
