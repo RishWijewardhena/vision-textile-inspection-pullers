@@ -368,8 +368,12 @@ class StitchMeasurementApp:
         """Continuous capture loop for standalone operation."""
         last_inference_time = 0
         frame_count = 0
-        os.makedirs(SAVE_DIR, exist_ok=True)
-        print(f"Saving to: {os.path.abspath(SAVE_DIR)}")
+
+        # Create session-specific folder for this run
+        session_start = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        session_dir = os.path.join(SAVE_DIR, session_start)
+        os.makedirs(session_dir, exist_ok=True)
+        print(f"Saving to: {os.path.abspath(session_dir)}")
 
         while self.running:
             ret, frame = self.cap.read()
@@ -381,7 +385,7 @@ class StitchMeasurementApp:
             if current_time - last_inference_time >= INFERENCE_INTERVAL:
                 annotated, measurements = self.process_frame(frame)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                save_path = os.path.join(SAVE_DIR, f"frame_{frame_count:05d}_{timestamp}.jpg")
+                save_path = os.path.join(session_dir, f"frame_{frame_count:05d}_{timestamp}.jpg")
                 cv2.imwrite(save_path, annotated)
                 print(f"Saved: {save_path} | Seam: {measurements.get('edge_distance_mm','N/A')}mm "
                       f"| Width: {measurements.get('stitch_width_mm','N/A')}mm")
@@ -399,6 +403,7 @@ class StitchMeasurementApp:
         self.cap.release()
         cv2.destroyAllWindows()
         print(f"\nTotal frames saved: {frame_count}")
+        print(f"📁 Session folder: {os.path.abspath(session_dir)}")
 
 
 if __name__ == "__main__":

@@ -48,14 +48,14 @@ MODEL_PATH = "Utils/best_puller.pt"
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
 CONF_THRESH = 0.2
-IOU_THRESH = 0.45 # measures the overlap between two bounding boxes (0 = no overlap, 1 = perfect overlap)
-MAX_DETECTIONS = 50 # max detections per frame to consider (to prevent outliers from overwhelming the system)
+IOU_THRESH = 0.35 # measures the overlap between two bounding boxes (0 = no overlap, 1 = perfect overlap)
+MAX_DETECTIONS = 24 # max detections per frame to consider (to prevent outliers from overwhelming the system)
 
 # -------------------------
 # Measurement Settings
 # -------------------------
 FRAME_BUFFER = 8          # median filter across frames
-MIN_STITCHES = 3          # minimum stitches to compute average
+MIN_STITCHES = 2         # minimum stitches to compute average
 MAX_EDGE_CANDIDATES = 20  # number of nearest contour points to try per stitch
 MAX_PX_DISTANCE = 250    # max pixel distance between stitch centroid and fabric edge (reduced for tighter filtering)
 ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y

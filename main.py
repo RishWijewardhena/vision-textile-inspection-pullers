@@ -118,7 +118,13 @@ def main():
     frame_count = 0
     last_stitch_count = 0
     total_distance_mm = 0.0
-    os.makedirs(SAVE_DIR, exist_ok=True)
+
+    # Create session-specific folder for this run
+    session_start = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    session_dir = os.path.join(SAVE_DIR, session_start)
+    os.makedirs(session_dir, exist_ok=True)
+    print(f"📁 Session folder: {os.path.abspath(session_dir)}")
+
     CAMERA_RECONNECT_ATTEMPTS = 0
     MAX_RECONNECT_ATTEMPTS = 10
 
@@ -212,7 +218,7 @@ def main():
                               (10, annotated.shape[0] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                save_path = os.path.join(SAVE_DIR, f"frame_{frame_count:05d}_{timestamp}.jpg")
+                save_path = os.path.join(session_dir, f"frame_{frame_count:05d}_{timestamp}.jpg")
                 cv2.imwrite(save_path, annotated)
 
                 if SHOW_WINDOWS:
@@ -247,7 +253,7 @@ def main():
         cv2.destroyAllWindows()
 
         print(f"\n✅ Total frames processed: {frame_count}")
-        print(f"📁 Images saved to: {os.path.abspath(SAVE_DIR)}")
+        print(f"📁 Images saved to: {os.path.abspath(session_dir)}")
         print("\n👋 System shutdown complete")
 
 
