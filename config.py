@@ -55,7 +55,7 @@ MAX_DETECTIONS = 50 # max detections per frame to consider (to prevent outliers 
 # Measurement Settings
 # -------------------------
 FRAME_BUFFER = 8          # median filter across frames
-MIN_STITCHES = 3          # minimum stitches to compute average
+MIN_STITCHES = 2         # minimum stitches to compute average
 MAX_EDGE_CANDIDATES = 20  # number of nearest contour points to try per stitch
 MAX_PX_DISTANCE = 250    # max pixel distance between stitch centroid and fabric edge (reduced for tighter filtering)
 ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y
