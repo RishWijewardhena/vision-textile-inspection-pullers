@@ -1,151 +1,132 @@
-"""""
-File cleanup module for removing old files based on retention policy.
-"""
+"""Background cleanup for old captured annotation files."""
 
 import os
-import time
 import threading
+import time
 from datetime import datetime, timedelta
-from config import FILE_RETENTION_HOURS, FILE_CLEANUP_INTERVAL_SECONDS ,SAVE_DIR
+
+from config import FILE_CLEANUP_INTERVAL_SECONDS, FILE_RETENTION_HOURS, SAVE_DIR
+
 
 class FileCleanerThread:
-
-
-    def __init__(self,directory=SAVE_DIR, retention_hours=FILE_RETENTION_HOURS, check_interval=FILE_CLEANUP_INTERVAL_SECONDS):
-        '''
-        Initialize the FileCleanerThread.
-        
-        Args:
-            directory self: Directory to monitor and clean up old files.
-            retention_hours: Delete files older than thuis many hours. 
-            check_interval: Interval in seconds between cleanup checks.
-        '''
-
+    def __init__(
+        self,
+        directory=SAVE_DIR,
+        retention_hours=FILE_RETENTION_HOURS,
+        check_interval=FILE_CLEANUP_INTERVAL_SECONDS,
+    ):
+        """Initialize file cleaner settings."""
         self.directory = directory
         self.retention_hours = retention_hours
         self.check_interval = check_interval
         self.running = False
-        self.thread=None
+        self.thread = None
 
-
-        print(f" File cleaner initialized: {directory}, Retention: {retention_hours} hours, Check Interval: {check_interval} seconds")
-        print(f"   Directory: {directory}")
-        print(f"   Retention: {retention_hours} hours")
-        print(f"   Check interval: {check_interval} seconds")
-
+        print(
+            "File cleaner initialized: "
+            f"directory={directory}, retention={retention_hours}h, interval={check_interval}s"
+        )
 
     def _delete_old_files(self):
-        '''
-         """Delete files older than retention period"""
-        
-        self : object
-        '''
-
+        """Delete files older than retention period (recursive)."""
         if not os.path.exists(self.directory):
-            print(f"Directory {self.directory} does not exist. Skipping cleanup.")
+            print(f"Cleanup skipped: directory not found -> {self.directory}")
             return
-        
-        current_time = datetime.now()
-        cutoff_time = current_time - timedelta(hours=self.retention_hours)
 
-        deleted_count = 0
-        deleted_size = 0
+        cutoff_time = datetime.now() - timedelta(hours=self.retention_hours)
+        deleted_files = 0
+        deleted_bytes = 0
 
         try:
-            for filename in os.listdir(self.directory):
-                filepath=os.path.join(self.directory,filename)
+            # Walk bottom-up so empty folders can be removed after file cleanup.
+            for root, _, files in os.walk(self.directory, topdown=False):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
 
-                if not os.path.isfile(filepath):
-                    continue
-                
-                #get the file modification time
-                file_mtime=datetime.fromtimestamp(os.path.getmtime(filepath))
-
-                #delete if older than cutoff time
-                if file_mtime<cutoff_time:
                     try:
-                        file_size=os.path.getsize(filepath)
-                        os.remove(filepath)
-                        deleted_count+=1
-                        deleted_size+=file_size
-                        print(f"Deleted file: {filepath}, Size: {file_size} bytes")
-                        print(f"🗑️ Deleted: {filename} (age: {current_time-file_mtime})")
+                        mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
+                    except OSError as exc:
+                        print(f"Could not read mtime for {file_path}: {exc}")
+                        continue
 
-                    except Exception as e:
-                        print(f"Error deleting file {filepath}: {e}")
+                    if mtime < cutoff_time:
+                        try:
+                            file_size = os.path.getsize(file_path)
+                            os.remove(file_path)
+                            deleted_files += 1
+                            deleted_bytes += file_size
+                            print(f"Deleted old file: {file_path}")
+                        except OSError as exc:
+                            print(f"Failed deleting {file_path}: {exc}")
 
-            if deleted_count>0:
-                size_mb=deleted_size/(1024*1024)
-                print(f"✅ Cleanup complete: {deleted_count} files deleted ({size_mb:.2f} MB freed)")
+                # Remove empty session directories except root SAVE_DIR itself.
+                if root != self.directory:
+                    try:
+                        if not os.listdir(root):
+                            os.rmdir(root)
+                            print(f"Removed empty folder: {root}")
+                    except OSError:
+                        # Ignore non-empty or race-condition errors.
+                        pass
 
-        except Exception as e:
-            print(f"❌Error during cleanup: {e}")
-
+            if deleted_files:
+                freed_mb = deleted_bytes / (1024 * 1024)
+                print(f"Cleanup complete: {deleted_files} files removed, {freed_mb:.2f} MB freed")
+            else:
+                print("Cleanup complete: no files older than retention window")
+        except Exception as exc:
+            print(f"Cleanup error: {exc}")
 
     def _cleanup_loop(self):
-        '''
-        Internal method: Run the cleanup loop in a separate thread.
-        '''
-
+        """Run cleanup periodically in a daemon thread."""
         while self.running:
-            print("🧹 Running file cleanup...")
             self._delete_old_files()
-           
-           #sleep in small intervals to allow graceful shutdown
+
+            # Sleep in small steps for responsive shutdown.
             for _ in range(self.check_interval):
                 if not self.running:
                     break
                 time.sleep(1)
 
-        print("File cleaner thread stopped.")
+        print("File cleaner thread stopped")
 
-    
     def start(self):
-        '''
-        start the cealnuo thread
-        '''
-
+        """Start the cleanup thread."""
         if self.running:
-            print("File cleaner is already running.")
+            print("File cleaner is already running")
             return False
-        
-        self.running = True
-        self.thread = threading.Thread(target=self._cleanup_loop, daemon=True) #deamon True to exit with main program 
-        self.thread.start()
-        print("File cleaner thread started.")
-        return True
-    
-    def stop(self):
-        '''
-        Stop the cleanup thread
-        '''
 
+        self.running = True
+        self.thread = threading.Thread(target=self._cleanup_loop, daemon=True)
+        self.thread.start()
+        print("File cleaner thread started")
+        return True
+
+    def stop(self):
+        """Stop the cleanup thread."""
         if not self.running:
-            print("File cleaner is not running.")
+            print("File cleaner is not running")
             return False
-        
+
         self.running = False
         if self.thread is not None:
-            self.thread.join(timeout=5) #TIMEOUT to prevent hanging
+            self.thread.join(timeout=5)
             self.thread = None
-        
-        print("File cleaner stopped.")
+
+        print("File cleaner stopped")
         return True
-    
+
     def force_cleanup(self):
-        """Manually trigger cleanup immediately"""
-        print("🧹 Manual cleanup triggered...")
+        """Run cleanup once immediately."""
         self._delete_old_files()
 
-#STANDALONE TEST
-if __name__=="__main__":
-    cleaner=FileCleanerThread()
+
+if __name__ == "__main__":
+    cleaner = FileCleanerThread()
     cleaner.start()
     try:
         print("File cleaner is running. Press Ctrl+C to stop.")
         while True:
             time.sleep(1)
-    
     except KeyboardInterrupt:
-        print("Stopping file cleaner...")
         cleaner.stop()
