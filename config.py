@@ -75,6 +75,13 @@ SERIAL_PORT=find_esp32() if find_esp32() is not None else os.getenv('SERIAL_PORT
 SERIAL_BAUDRATE = 115200
 SERIAL_TIMEOUT = 1.0
 
+
+#--------------------------
+# offset correction for stitch length and seam allowance
+# --------------------------
+STITCH_LENGTH_OFFSET_MM = float(os.getenv('STITCH_LENGTH_OFFSET_MM', -0.5))  # Adjust this value based on calibration (negative to reduce measured length)
+SEAM_ALLOWANCE_MM = float(os.getenv('SEAM_ALLOWANCE_MM', 4.5))          # Add this value to final stitch length 
+
 # -------------------------
 # Database Config  ensuring these are set in .env file or handled gracefully
 # -------------------------
