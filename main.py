@@ -168,6 +168,14 @@ def main():
                 # Determine if this is a valid measurement
                 has_valid_measurement = (seam_length_mm is not None and stitch_width_mm is not None)
 
+                if has_valid_measurement:
+                    # Apply offsets from config
+                    seam_length_mm += SEAM_ALLOWANCE_MM
+                    stitch_width_mm += STITCH_LENGTH_OFFSET_MM
+
+                    if LOG_DEBUG:
+                        print(f"✅ Valid measurement: seam={seam_length_mm:.2f}mm, width={stitch_width_mm:.2f}mm")
+
                 # If valid, save to buffer
                 if has_valid_measurement:
                     valid_seam_buffer.append(seam_length_mm)
