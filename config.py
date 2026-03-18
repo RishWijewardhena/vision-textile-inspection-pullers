@@ -64,7 +64,7 @@ SKIP_CLUSTER = True      # if True, don't try to cluster into 2 stitch lines
 ROI_MARGIN_PX = 10        # pixels below marker far edge to include in ROI
 ROI_SECTIONS = 5          # divide frame height into this many equal parts
 ROI_SECTION_START = 2     # 0-based index of first ROI section (4th section)
-ROI_SECTION_END = 4     # 0-based index of last ROI section exclusive (sections 4 and 5)
+ROI_SECTION_END = 5     # 0-based index of last ROI section exclusive (sections 4 and 5)
 
 # -------------------------
 # Serial Communication
