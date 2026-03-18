@@ -128,9 +128,9 @@ def main():
     CAMERA_RECONNECT_ATTEMPTS = 0
     MAX_RECONNECT_ATTEMPTS = 10
 
-    # Buffer for last 5 valid measurements
-    valid_seam_buffer = deque(maxlen=5)
-    valid_width_buffer = deque(maxlen=5)
+    # Buffer for last 5 valid measurements (initialized with values from config)
+    valid_seam_buffer = deque(INITIAL_SEAM_VALUES, maxlen=5)
+    valid_width_buffer = deque(INITIAL_WIDTH_VALUES, maxlen=5)
 
     try:
         while True:

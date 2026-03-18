@@ -56,6 +56,11 @@ MAX_DETECTIONS = 24 # max detections per frame to consider (to prevent outliers 
 # -------------------------
 FRAME_BUFFER = 8          # median filter across frames
 MIN_STITCHES = 2         # minimum stitches to compute average
+
+# Buffer initialization values (comma-separated floats, max 5 each)
+# Demo values used if .env variables are empty
+INITIAL_SEAM_VALUES = [float(x.strip()) for x in os.getenv('INITIAL_SEAM_VALUES', '2.5,2.6,2.4,2.7,3.0').split(',') if x.strip()]
+INITIAL_WIDTH_VALUES = [float(x.strip()) for x in os.getenv('INITIAL_WIDTH_VALUES', '3.75,3.8,4.2,3.9,4.3').split(',') if x.strip()]
 MAX_EDGE_CANDIDATES = 20  # number of nearest contour points to try per stitch
 MAX_PX_DISTANCE = 250    # max pixel distance between stitch centroid and fabric edge (reduced for tighter filtering)
 ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y
