@@ -3,3 +3,4 @@ __pycache__/
 .env
 saved_annotations/
 test.py
+logs/
