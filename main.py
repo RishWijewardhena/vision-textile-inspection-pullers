@@ -154,7 +154,29 @@ def main():
             current_time = time.time()
 
             if current_time - last_inference_time >= INFERENCE_INTERVAL:
-                annotated, measurements = measurement_app.process_frame(frame)
+                # Burst capture: take N frames at intervals, select best
+                if LOG_DEBUG:
+                    print(f"📸 Starting burst capture ({BURST_COUNT} frames @ {BURST_INTERVAL}s intervals)")
+                burst_result = measurement_app.get_burst_measurement(
+                    burst_count=BURST_COUNT,
+                    burst_interval=BURST_INTERVAL,
+                    return_all_frames=SAVE_ALL_BURST_FRAMES
+                )
+
+                if burst_result is None:
+                    if LOG_DEBUG:
+                        print("⚠️ Burst capture failed - all frames invalid")
+                    continue
+
+                # Handle return format
+                if SAVE_ALL_BURST_FRAMES and isinstance(burst_result, dict):
+                    annotated, measurements = burst_result['best']
+                    all_frames = burst_result['all_frames']
+                    best_index = burst_result['best_index']
+                else:
+                    annotated, measurements = burst_result
+                    all_frames = None
+                    best_index = 0
 
                 current_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
 
@@ -226,8 +248,23 @@ def main():
                               (10, annotated.shape[0] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                save_path = os.path.join(session_dir, f"frame_{frame_count:05d}_{timestamp}.jpg")
+                burst_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # with milliseconds
+
+                # Save best frame
+                save_path = os.path.join(session_dir, f"burst_{frame_count:05d}_best_{burst_timestamp}.jpg")
                 cv2.imwrite(save_path, annotated)
+                if LOG_DEBUG:
+                    print(f"💾 Saved best frame: {save_path} (burst #{frame_count}, frame #{best_index})")
+
+                # Save all burst frames if enabled
+                if SAVE_ALL_BURST_FRAMES and all_frames:
+                    for idx, (frame_annot, frame_meas) in enumerate(all_frames):
+                        if frame_annot is not None:
+                            meas_status = "valid" if frame_meas.get('edge_distance_mm') and frame_meas.get('stitch_width_mm') else "invalid"
+                            all_save_path = os.path.join(session_dir, f"burst_{frame_count:05d}_raw{idx:02d}_{meas_status}_{burst_timestamp}.jpg")
+                            cv2.imwrite(all_save_path, frame_annot)
+                    if LOG_DEBUG:
+                        print(f"💾 Saved {len(all_frames)} burst frames")
 
                 if SHOW_WINDOWS:
                     cv2.imshow("Stitch Measurement System", annotated)

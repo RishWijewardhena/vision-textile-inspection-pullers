@@ -364,6 +364,78 @@ class StitchMeasurementApp:
             return None, None
         return self.process_frame(frame)
 
+    def get_burst_measurement(self, burst_count=5, burst_interval=0.1, return_all_frames=False):
+        """
+        Capture multiple frames in rapid succession and select the best measurement.
+
+        Selection criteria (in priority order):
+        1. Valid measurements (both seam and width)
+        2. Higher stitch count (more detections = more reliable)
+        3. Lower variance in measurements (more consistent)
+
+        Args:
+            burst_count: Number of frames to capture
+            burst_interval: Seconds between frames
+            return_all_frames: If True, return all frames for saving
+
+        Returns:
+            If return_all_frames=False: (annotated_frame, measurements) of best frame
+            If return_all_frames=True: dict with 'best' and 'all_frames' keys
+        """
+        results = []
+
+        for i in range(burst_count):
+            ret, frame = self.cap.read()
+            if not ret:
+                if LOG_DEBUG:
+                    print(f"⚠️ Burst frame {i+1}/{burst_count} failed to capture")
+                continue
+
+            annotated, measurements = self.process_frame(frame)
+
+            seam = measurements.get('edge_distance_mm')
+            width = measurements.get('stitch_width_mm')
+            count = measurements.get('stitch_count', 0)
+
+            results.append({
+                'annotated': annotated,
+                'measurements': measurements,
+                'seam': seam,
+                'width': width,
+                'count': count,
+                'valid': seam is not None and width is not None,
+                'index': i
+            })
+
+            if i < burst_count - 1:
+                time.sleep(burst_interval)
+
+        if not results:
+            return None, None
+
+        # Filter valid measurements
+        valid_results = [r for r in results if r['valid']]
+
+        if valid_results:
+            # Among valid results, pick highest stitch count
+            best = max(valid_results, key=lambda x: x['count'])
+            if LOG_DEBUG:
+                print(f"🎯 Burst selected: {best['count']} stitches, seam={best['seam']:.2f}mm, width={best['width']:.2f}mm")
+        else:
+            # No valid measurements - pick highest stitch count anyway
+            best = max(results, key=lambda x: x['count'])
+            if LOG_DEBUG:
+                print(f"⚠️ Burst: No valid measurements, using best available ({best['count']} stitches)")
+
+        if return_all_frames:
+            return {
+                'best': (best['annotated'], best['measurements']),
+                'all_frames': [(r['annotated'], r['measurements']) for r in results],
+                'best_index': best['index']
+            }
+        else:
+            return best['annotated'], best['measurements']
+
     def run(self):
         """Continuous capture loop for standalone operation."""
         last_inference_time = 0

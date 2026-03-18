@@ -106,7 +106,12 @@ INFERENCE_INTERVAL =2  # seconds between inferences
 SAVE_DIR = "saved_annotations"
 LOG_DEBUG = True          # set True to print debug info
 
-
+# -------------------------
+# Burst Capture Config
+# -------------------------
+BURST_COUNT = 5           # number of frames to capture per inference
+BURST_INTERVAL = 0.1      # seconds between burst frames
+SAVE_ALL_BURST_FRAMES = True  # if True, save all burst frames; if False, save only best
 
 # -------------------------
 # file cleaner 
