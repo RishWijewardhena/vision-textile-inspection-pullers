@@ -24,7 +24,7 @@ def force_camera_resolution(cap, w, h):
     aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, CAMERA_AUTO_EXPOSURE)
-    cap.set(cv2.CAP_PROP_EXPOSURE, CAMERA_EXPOSURE)
+    # cap.set(cv2.CAP_PROP_EXPOSURE, CAMERA_EXPOSURE)
     if aw != w or ah != h:
         print(f"Warning: camera resolution {aw}x{ah}, expected {w}x{h}")
     return aw, ah
@@ -132,9 +132,13 @@ class StitchMeasurementApp:
         roi_y_max = int(ROI_SECTION_END   * section_h)
 
         try:
-            results = self.model.predict(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
-                                         verbose=False, conf=CONF_THRESH,
-                                         iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS)
+            # results = self.model.predict(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
+            #                              verbose=False, conf=CONF_THRESH,
+            #                              iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS)
+            results = self.model.predict(frame,
+                                          verbose=False, conf=CONF_THRESH,
+                                          iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS)
+            
             r = results[0]
         except Exception as e:
             print("Model inference error:", e)
