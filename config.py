@@ -39,12 +39,12 @@ CAMERA_INDEX=find_camera()
 CALIB_W = 1280
 CALIB_H = 960
 CAMERA_AUTO_EXPOSURE = 3  # V4L2: 1 = manual, 3 = auto
-CAMERA_EXPOSURE = 3.5 # Manual exposure: -10 (darkest) to -4 (brightest). Adjust for lighting conditions.
+# CAMERA_EXPOSURE = 3.5 # Manual exposure: -10 (darkest) to -4 (brightest). Adjust for lighting conditions.
 
 # -------------------------
 # YOLO Model Config
 # -------------------------
-MODEL_PATH = "Utils/best_puller.pt"
+MODEL_PATH = "Utils/New_pullers_model.pt"
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
 CONF_THRESH = 0.2
@@ -69,7 +69,7 @@ SKIP_CLUSTER = True      # if True, don't try to cluster into 2 stitch lines
 ROI_MARGIN_PX = 10        # pixels below marker far edge to include in ROI
 ROI_SECTIONS = 5          # divide frame height into this many equal parts
 ROI_SECTION_START = 2     # 0-based index of first ROI section (4th section)
-ROI_SECTION_END = 5     # 0-based index of last ROI section exclusive (sections 4 and 5)
+ROI_SECTION_END = 4     # 0-based index of last ROI section exclusive (sections 4 and 5)
 
 # -------------------------
 # Serial Communication
