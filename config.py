@@ -87,6 +87,15 @@ SERIAL_TIMEOUT = 1.0
 STITCH_LENGTH_OFFSET_MM = float(os.getenv('STITCH_LENGTH_OFFSET_MM', -0.3))  # Adjust this value based on calibration (negative to reduce measured length)
 SEAM_ALLOWANCE_MM = float(os.getenv('SEAM_ALLOWANCE_MM', 4.5))          # Add this value to final stitch length 
 
+#---------------------
+# valid measuremnets range
+#---------------------
+Seam_upper_limit = 8.0 # mm — if seam length exceeds this, it's likely a false positive
+stitch_upper_limit = 4.15# mm — if stitch width exceeds this, it's likely a false positive
+Seam_lower_limit=3.5 # mm — if seam length is below this, it's likely a false positive
+stitch_lower_limit=2.8 # mm — if stitch width is below this, it's likely a false positive   
+
+
 # -------------------------
 # Database Config  ensuring these are set in .env file or handled gracefully
 # -------------------------
