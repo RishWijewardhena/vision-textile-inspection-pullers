@@ -58,9 +58,7 @@ FRAME_BUFFER = 8          # median filter across frames
 MIN_STITCHES = 2         # minimum stitches to compute average
 
 # Buffer initialization values (comma-separated floats, max 5 each)
-# Demo values used if .env variables are empty
-INITIAL_SEAM_VALUES = [float(x.strip()) for x in os.getenv('INITIAL_SEAM_VALUES', '2.5,2.6,2.4,2.7,3.0').split(',') if x.strip()]
-INITIAL_WIDTH_VALUES = [float(x.strip()) for x in os.getenv('INITIAL_WIDTH_VALUES', '3.75,3.8,4.2,3.9,4.3').split(',') if x.strip()]
+
 MAX_EDGE_CANDIDATES = 20  # number of nearest contour points to try per stitch
 MAX_PX_DISTANCE = 250    # max pixel distance between stitch centroid and fabric edge (reduced for tighter filtering)
 ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y
@@ -85,15 +83,15 @@ SERIAL_TIMEOUT = 1.0
 # offset correction for stitch length and seam allowance
 # --------------------------
 STITCH_LENGTH_OFFSET_MM = float(os.getenv('STITCH_LENGTH_OFFSET_MM', -0.3))  # Adjust this value based on calibration (negative to reduce measured length)
-SEAM_ALLOWANCE_MM = float(os.getenv('SEAM_ALLOWANCE_MM', 4.5))          # Add this value to final stitch length 
+SEAM_ALLOWANCE_OFFSET_MM = float(os.getenv('SEAM_ALLOWANCE_OFFSET_MM', 4.5))          # Add this value to final stitch length 
 
 #---------------------
 # valid measuremnets range
 #---------------------
 Seam_upper_limit = 8.0 # mm — if seam length exceeds this, it's likely a false positive
-stitch_upper_limit = 4.15# mm — if stitch width exceeds this, it's likely a false positive
+stitch_upper_limit = 4.4# mm — if stitch width exceeds this, it's likely a false positive
 Seam_lower_limit=3.5 # mm — if seam length is below this, it's likely a false positive
-stitch_lower_limit=2.8 # mm — if stitch width is below this, it's likely a false positive   
+stitch_lower_limit=2.6 # mm — if stitch width is below this, it's likely a false positive   
 
 
 # -------------------------
@@ -146,4 +144,4 @@ MQTT_PASSWORD = os.getenv("MQTT_PASSWORD",'bbf12cwcpm')
 DEVICE_ID = DB_CONFIG["table"]
 MQTT_HEARTBEAT_TOPIC = f"machine/{DEVICE_ID}/status/heartbeat"
 MQTT_HEARTBEAT_INTERVAL = 2.0  # seconds
-MQTT_TLS_INSECURE="true"
+MQTT_TLS_INSECURE = os.getenv("MQTT_TLS_INSECURE", "false").strip().lower() in ("1", "true", "yes", "on")
