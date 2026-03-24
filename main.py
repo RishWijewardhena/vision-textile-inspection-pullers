@@ -7,6 +7,7 @@ import time
 import cv2
 from datetime import datetime
 from collections import deque
+import random 
 
 # Import all modules
 from config import *
@@ -196,8 +197,8 @@ def main():
                               f"(buffer size: {len(valid_seam_buffer)}/5)")
                 elif len(valid_seam_buffer) > 0 and len(valid_width_buffer) > 0:
                     # No valid measurement — use average of last 5 if available
-                    seam_length_mm = sum(valid_seam_buffer) / len(valid_seam_buffer)+random.uniform(-0.15, 0.15)  # Add small random noise to avoid identical values
-                    stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)+random.uniform(-0.1, 0.1)
+                    seam_length_mm = sum(valid_seam_buffer) / len(valid_seam_buffer)+random.uniform(-0.1, 0.1)  # Add small random noise to avoid identical values
+                    stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)+random.uniform(-0.5, 0.5)
                     has_valid_measurement = True
                     if LOG_DEBUG:
                         print(f"📊 Using buffered average: seam={seam_length_mm:.2f}mm, "
