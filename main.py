@@ -118,7 +118,9 @@ def main():
     last_inference_time = 0
     frame_count = 0
     last_stitch_count = 0
-    total_distance_mm = 0.0
+    total_distance_mm = float(db.get_last_record_total_distance() if db else 0.0)  # Start from last recorded total distance if DB is available, else 0.0
+    if LOG_DEBUG:
+        print(f"📊 Starting total distance: {total_distance_mm:.2f}mm")
 
     # Create session-specific folder for this run
     session_start = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -164,8 +166,23 @@ def main():
                 stitch_delta = 0
                 moved_distance_mm = 0.0
 
+                # Calculate movement based on stitch count change
+                stitch_delta = current_stitch_count - last_stitch_count
+                last_stitch_count = current_stitch_count
+
+                # getting the measurements 
                 seam_length_mm = measurements.get('edge_distance_mm', None)
                 stitch_width_mm = measurements.get('stitch_width_mm', None)
+
+                #applying the offsets
+                seam_length_mm = seam_length_mm+SEAM_ALLOWANCE_OFFSET_MM if seam_length_mm is not None else seam_length_mm
+                stitch_width_mm = stitch_width_mm+STITCH_LENGTH_OFFSET_MM if stitch_width_mm is not None else stitch_width_mm
+
+                if LOG_DEBUG:
+                    print(f"🔍 Raw measurements: seam={measurements.get('edge_distance_mm', 'N/A')}mm, "
+                          f"width={measurements.get('stitch_width_mm', 'N/A')}mm")
+                    print(f"⚙️ Adjusted measurements: seam={seam_length_mm if seam_length_mm is not None else 'N/A'}mm, "
+                          f"width={stitch_width_mm if stitch_width_mm is not None else 'N/A'}mm")
 
                 # Determine if this is a valid measurement
                 valid_seam = (
@@ -180,14 +197,6 @@ def main():
 
                 has_valid_measurement = valid_seam and valid_stitch  
 
-                if has_valid_measurement:
-                    # Apply offsets from config
-                    seam_length_mm += SEAM_ALLOWANCE_MM
-                    stitch_width_mm += STITCH_LENGTH_OFFSET_MM
-
-                    if LOG_DEBUG:
-                        print(f"✅ Valid measurement: seam={seam_length_mm:.2f}mm, width={stitch_width_mm:.2f}mm")
-
                 # If valid, save to buffer
                 if has_valid_measurement:
                     valid_seam_buffer.append(seam_length_mm)
@@ -195,28 +204,25 @@ def main():
                     if LOG_DEBUG:
                         print(f"📦 Buffered measurement: seam={seam_length_mm:.2f}mm, width={stitch_width_mm:.2f}mm "
                               f"(buffer size: {len(valid_seam_buffer)}/5)")
+                              
                 elif len(valid_seam_buffer) > 0 and len(valid_width_buffer) > 0:
                     # No valid measurement — use average of last 5 if available
                     seam_length_mm = sum(valid_seam_buffer) / len(valid_seam_buffer)+random.uniform(-0.1, 0.1)  # Add small random noise to avoid identical values
-                    stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)+random.uniform(-0.5, 0.5)
+                    stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)+random.uniform(-0.08, 0.08)
                     has_valid_measurement = True
                     if LOG_DEBUG:
                         print(f"📊 Using buffered average: seam={seam_length_mm:.2f}mm, "
                               f"width={stitch_width_mm:.2f}mm (from {len(valid_seam_buffer)} samples)")
                 else:
-                    if LOG_DEBUG:
+                    if LOG_DEBUG and stitch_delta > 0:
                         print("⚠️ No valid measurement and buffer is empty — skipping DB update")
 
-                # Single movement calculation (removed duplicate block)
-                if has_valid_measurement and stitch_width_mm is not None:
-                    stitch_delta = current_stitch_count - last_stitch_count
+                if has_valid_measurement and stitch_delta> 0:
+                    # Insert to database (only log if there's a new rotation)
                     moved_distance_mm = stitch_delta * stitch_width_mm
                     total_distance_mm += moved_distance_mm
-                    last_stitch_count = current_stitch_count
 
-                if has_valid_measurement and current_stitch_count > 0:
-                    # Insert to database (only log if there's a new rotation)
-                    if db and stitch_delta > 0:
+                    if db:
                         success = db.insert_measurement(
                             total_distance=round(total_distance_mm, 1),
                             stitch_length=round(stitch_width_mm, 1),
@@ -227,7 +233,7 @@ def main():
 
                     info_text = (f"Count: {current_stitch_count} | Count_delta: {stitch_delta} | Moved: {moved_distance_mm:.2f}mm | "
                                f"Total: {total_distance_mm:.2f}mm | Seam: {seam_length_mm:.2f}mm")
-                    if stitch_width_mm:
+                    if stitch_width_mm and stitch_delta > 0:
                         info_text += f" | Width: {stitch_width_mm:.2f}mm"
 
                     cv2.putText(annotated, info_text, (10, annotated.shape[0] - 40),
