@@ -218,9 +218,9 @@ def main():
                     # Insert to database (only log if there's a new rotation)
                     if db and stitch_delta > 0:
                         success = db.insert_measurement(
-                            total_distance=total_distance_mm,
-                            stitch_length=stitch_width_mm,
-                            seam_allowance=seam_length_mm,
+                            total_distance=round(total_distance_mm, 1),
+                            stitch_length=round(stitch_width_mm, 1),
+                            seam_allowance=round(seam_length_mm, 1)
                         )
                         if not success:
                             print("⚠️ Database insert failed - will retry on next valid measurement")
