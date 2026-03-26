@@ -20,11 +20,16 @@ def load_json(path):
 def force_camera_resolution(cap, w, h):
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+    # cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)      # Manual                                                                                                                                  
+    # cap.set(cv2.CAP_PROP_EXPOSURE, -100)        # V4L2 exposure (negative for OpenCV)                                                                                                     
+    # cap.set(cv2.CAP_PROP_GAIN, 30)              # Lower gain = darker                                                                                                                     
+    # cap.set(cv2.CAP_PROP_BRIGHTNESS, -30)       # Reduce brightness 
+
     time.sleep(2)
     aw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     ah = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, CAMERA_AUTO_EXPOSURE)
-    # cap.set(cv2.CAP_PROP_EXPOSURE, CAMERA_EXPOSURE)
+
     if aw != w or ah != h:
         print(f"Warning: camera resolution {aw}x{ah}, expected {w}x{h}")
     return aw, ah
@@ -149,7 +154,7 @@ class StitchMeasurementApp:
 
         # Draw ROI band
         roi_overlay = annotated.copy()
-        cv2.rectangle(roi_overlay, (0, roi_y_min), (w, roi_y_max), (0, 255, 255), -1)
+        cv2.rectangle(roi_overlay, (0, roi_y_min), (w, roi_y_max), (0, 255, 255), 4)
         cv2.addWeighted(roi_overlay, 0.15, annotated, 0.85, 0, annotated)
         cv2.rectangle(annotated, (0, roi_y_min), (w, roi_y_max), (0, 255, 255), 2)
         cv2.putText(annotated, "ROI", (10, roi_y_min + 18),
@@ -322,9 +327,9 @@ class StitchMeasurementApp:
                 cv2.circle(annotated, (int(round(left_px)),  int(round(cy))), 3, (200, 200, 0), -1)
                 cv2.circle(annotated, (int(round(right_px)), int(round(cy))), 3, (200, 200, 0), -1)
                 cv2.putText(annotated, f"w:{width_mm:.1f}mm",
-                            (int(round(cx)) + 6, int(round(cy)) + 6),
+                            (int(round(cx)), int(round(cy)) -20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
-
+            
             cv2.circle(annotated, (int(round(cx)), int(round(cy))), 8, (255, 0, 0), -1)
 
         n_found = len(active_indices)
