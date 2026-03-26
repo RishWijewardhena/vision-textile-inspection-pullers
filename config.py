@@ -44,7 +44,8 @@ CAMERA_AUTO_EXPOSURE = 3  # V4L2: 1 = manual, 3 = auto
 # -------------------------
 # YOLO Model Config
 # -------------------------
-MODEL_PATH = "Utils/New_pullers_model.pt"
+# MODEL_PATH = "Utils/New_pullers_model.pt"
+MODEL_PATH = "Utils/best_puller_model.pt" # with contrast enhancement
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
 CONF_THRESH = 0.2
@@ -65,9 +66,9 @@ ENVELOPE_NEIGHBORHOOD = 5# columns around centroid to average envelope y
 MIN_CLUSTER_SPREAD_PX = 20 # min y-spread (px) between stitches to trigger 2-row clustering
 SKIP_CLUSTER = True      # if True, don't try to cluster into 2 stitch lines
 ROI_MARGIN_PX = 10        # pixels below marker far edge to include in ROI
-ROI_SECTIONS = 5          # divide frame height into this many equal parts
-ROI_SECTION_START = 2     # 0-based index of first ROI section (4th section)
-ROI_SECTION_END = 4     # 0-based index of last ROI section exclusive (sections 4 and 5)
+ROI_SECTIONS = 8          # divide frame height into this many equal parts
+ROI_SECTION_START = 4     # 0-based index of first ROI section (4th section)
+ROI_SECTION_END =  7   # 0-based index of last ROI section exclusive (sections 4 and 5)
 
 # -------------------------
 # Serial Communication
@@ -79,7 +80,7 @@ SERIAL_BAUDRATE = 115200
 SERIAL_TIMEOUT = 1.0
 
 
-#--------------------------
+#-------------------------
 # offset correction for stitch length and seam allowance
 # --------------------------
 STITCH_LENGTH_OFFSET_MM = float(os.getenv('STITCH_LENGTH_OFFSET_MM', -0.3))  # Adjust this value based on calibration (negative to reduce measured length)
