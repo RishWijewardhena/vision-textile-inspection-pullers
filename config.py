@@ -39,7 +39,6 @@ CAMERA_INDEX=find_camera()
 CALIB_W = 1280
 CALIB_H = 960
 CAMERA_AUTO_EXPOSURE = 3  # V4L2: 1 = manual, 3 = auto
-# CAMERA_EXPOSURE = 3.5 # Manual exposure: -10 (darkest) to -4 (brightest). Adjust for lighting conditions.
 
 # -------------------------
 # YOLO Model Config
