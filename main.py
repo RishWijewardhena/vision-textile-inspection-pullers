@@ -162,10 +162,6 @@ def main():
 
                 current_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
 
-                # Initialize variables to prevent UnboundLocalError
-                stitch_delta = 0
-                moved_distance_mm = 0.0
-
                 # Calculate movement based on stitch count change
                 stitch_delta = current_stitch_count - last_stitch_count
                 last_stitch_count = current_stitch_count
