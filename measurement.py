@@ -157,7 +157,7 @@ class StitchMeasurementApp:
         cv2.rectangle(roi_overlay, (0, roi_y_min), (w, roi_y_max), (0, 255, 255), 4)
         cv2.addWeighted(roi_overlay, 0.15, annotated, 0.85, 0, annotated)
         cv2.rectangle(annotated, (0, roi_y_min), (w, roi_y_max), (0, 255, 255), 2)
-        cv2.putText(annotated, "ROI", (10, roi_y_min + 18),
+        cv2.putText(annotated, "ROI", (0, roi_y_min + 18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
         stitch_masks, stitch_boxes = [], []
@@ -326,9 +326,9 @@ class StitchMeasurementApp:
                          (int(round(right_px)), int(round(cy))), (200, 200, 0), 1)
                 cv2.circle(annotated, (int(round(left_px)),  int(round(cy))), 3, (200, 200, 0), -1)
                 cv2.circle(annotated, (int(round(right_px)), int(round(cy))), 3, (200, 200, 0), -1)
-                cv2.putText(annotated, f"w:{width_mm:.1f}mm",
+                cv2.putText(annotated, f"{width_mm:.1f}",
                             (int(round(cx)), int(round(cy)) -20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.40, (0, 255, 0), 1)
             
             cv2.circle(annotated, (int(round(cx)), int(round(cy))), 8, (255, 0, 0), -1)
 
