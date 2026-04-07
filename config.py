@@ -44,7 +44,9 @@ CAMERA_AUTO_EXPOSURE = 3  # V4L2: 1 = manual, 3 = auto
 # YOLO Model Config
 # -------------------------
 # MODEL_PATH = "Utils/New_pullers_model.pt"
-MODEL_PATH = "Utils/best_puller_model.pt" # with contrast enhancement
+# MODEL_PATH = "Utils/best_puller_model.pt" # with contrast enhancement
+MODEL_PATH = "Utils/New_puller_model.pt" # with contrast enhancement
+
 STITCH_CLASS_ID = 1  # model class id for stitch
 MARKER_CLASS_ID = 0   # model class id for fabric edge marker (if applicable)
 CONF_THRESH = 0.2
