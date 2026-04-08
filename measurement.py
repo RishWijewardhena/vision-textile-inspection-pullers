@@ -89,6 +89,34 @@ def kmeans_1d_two_clusters(values, max_iters=10):
         c0, c1, labels = new_c0, new_c1, new_labels
     return labels, (c0, c1)
 
+def filtered_mean(values, min_samples=4, mad_scale=3.0):
+    """Return mean after removing outliers with MAD; falls back safely when needed."""
+    if not values:
+        return None, 0, 0
+
+    arr = np.array(values, dtype=np.float64)
+    original_count = arr.size
+    if original_count < min_samples:
+        return float(arr.mean()), original_count, original_count
+
+    median = np.median(arr)
+    abs_dev = np.abs(arr - median)
+    mad = np.median(abs_dev)
+
+    # If all values are nearly identical, keep everything.
+    if mad < 1e-9:
+        return float(arr.mean()), original_count, original_count
+
+    robust_z = 0.6745 * abs_dev / mad
+    inlier_mask = robust_z <= mad_scale
+    inliers = arr[inlier_mask]
+
+    # If filtering is too aggressive, fall back to all values.
+    if inliers.size == 0:
+        return float(arr.mean()), original_count, original_count
+
+    return float(inliers.mean()), int(inliers.size), original_count
+
 # -------------------------
 # Stitch Measurement Application
 # -------------------------
@@ -334,18 +362,36 @@ class StitchMeasurementApp:
 
         n_found = len(active_indices)
 
+        # Per-frame robust averaging with outlier rejection
+        dist_mean, dist_inliers, dist_total = filtered_mean(
+            per_dists,
+            min_samples=OUTLIER_MIN_SAMPLES,
+            mad_scale=OUTLIER_MAD_SCALE,
+        )
+        width_mean, width_inliers, width_total = filtered_mean(
+            per_widths,
+            min_samples=OUTLIER_MIN_SAMPLES,
+            mad_scale=OUTLIER_MAD_SCALE,
+        )
+
         # Temporal smoothing
-        if len(per_dists) >= self.min_stitches:
-            self.frame_buf_dist.append(float(np.mean(per_dists)))
+        if dist_mean is not None and dist_inliers >= self.min_stitches:
+            self.frame_buf_dist.append(dist_mean)
             smooth_dist = float(np.median(self.frame_buf_dist))
         else:
             smooth_dist = None
 
-        if len(per_widths) >= self.min_stitches:
-            self.frame_buf_width.append(float(np.mean(per_widths)))
+        if width_mean is not None and width_inliers >= self.min_stitches:
+            self.frame_buf_width.append(width_mean)
             smooth_width = float(np.median(self.frame_buf_width))
         else:
             smooth_width = None
+
+        if LOG_DEBUG:
+            print(
+                f"Filtered seam inliers: {dist_inliers}/{dist_total} | "
+                f"Filtered width inliers: {width_inliers}/{width_total}"
+            )
 
         if smooth_dist is not None and smooth_width is not None:
             info = f"Seam: {smooth_dist:.2f}mm | Width: {smooth_width:.2f}mm (n={n_found})"

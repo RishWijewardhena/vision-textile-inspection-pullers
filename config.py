@@ -71,6 +71,10 @@ ROI_SECTIONS = 8          # divide frame height into this many equal parts
 ROI_SECTION_START = 4     # 0-based index of first ROI section (4th section)
 ROI_SECTION_END =  7   # 0-based index of last ROI section exclusive (sections 4 and 5)
 
+# Outlier filtering for per-frame measurements before mean calculation
+OUTLIER_MIN_SAMPLES = 4   # apply outlier filter only when this many values exist
+OUTLIER_MAD_SCALE = 3.0   # larger value = less aggressive filtering
+
 # -------------------------
 # Serial Communication
 # -------------------------
