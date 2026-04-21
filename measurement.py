@@ -232,7 +232,7 @@ class StitchMeasurementApp:
 
         if best_marker_box is not None:
             x1, y1, x2, y2 = best_marker_box
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 0, 255), 2)
+            # cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 0, 255), 2) commented out th emagenda box
 
         if LOG_DEBUG:
             print(f"Stitches in ROI: {len(stitch_masks)} | Markers in ROI: {marker_count} | Best marker cy: {best_marker_y:.1f}")
