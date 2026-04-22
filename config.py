@@ -9,6 +9,13 @@ from hardware_utils import find_esp32 ,find_camera
 # Load environment variables from .env file
 load_dotenv()
 
+
+def _env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
 # -------------------------
 # Camera Calibration Config
 # -------------------------
@@ -149,5 +156,6 @@ MQTT_PASSWORD = os.getenv("MQTT_PASSWORD",'bbf12cwcpm')
 # device id = DB_TABLE (as you specified)
 DEVICE_ID = DB_CONFIG["table"]
 MQTT_HEARTBEAT_TOPIC = f"machine/{DEVICE_ID}/status/heartbeat"
+MQTT_RESET_TOPIC = f"machine/{DEVICE_ID}/commands/reset"
 MQTT_HEARTBEAT_INTERVAL = 2.0  # seconds
-MQTT_TLS_INSECURE = os.getenv("MQTT_TLS_INSECURE", "false").strip().lower() in ("1", "true", "yes", "on")
+MQTT_TLS_INSECURE = _env_bool("MQTT_TLS_INSECURE", True)
