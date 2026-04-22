@@ -19,10 +19,41 @@ class SerialReader:
         self.thread = None
         self.latest_stitch_count = 0
         self.lock = threading.Lock()
+        self._serial_lock = threading.Lock()
         self._last_reconnect_attempt = 0
         self._reconnect_interval = 5  # seconds
         self._buffer = ""
         self._max_buffer_size = 8192
+
+    def send_command(self, command):
+        if not isinstance(command, str):
+            command = str(command)
+        command = command.strip()
+        if not command:
+            print("⚠️ Serial send command rejected: empty command")
+            return False
+
+        if not self.serial_conn or not self.serial_conn.is_open:
+            self._try_reconnect()
+
+        if not self.serial_conn or not self.serial_conn.is_open:
+            print("⚠️ Serial send failed: serial not connected")
+            return False
+
+        try:
+            with self._serial_lock:
+                self.serial_conn.write(command.encode("utf-8"))
+                self.serial_conn.flush()
+            return True
+        except Exception as e:
+            print(f"❌ Serial send failed: {e}")
+            try:
+                self.serial_conn.close()
+            except Exception:
+                pass
+            self.serial_conn = None
+            self._try_reconnect()
+            return False
         
     def connect(self):
         """Establish serial connection"""
