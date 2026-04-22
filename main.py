@@ -4,6 +4,7 @@ Main orchestrator - integrates all modules
 import os
 import sys
 import time
+import threading
 import cv2
 from datetime import datetime
 from collections import deque
@@ -93,6 +94,11 @@ def main():
 
     # Initialize MQTT heartbeat
     heartbeat = None
+    reset_requested = threading.Event()
+
+    def queue_reset_request():
+        reset_requested.set()
+
     try:
         heartbeat = MqttHeartbeat(
             broker=MQTT_SERVER,
@@ -102,6 +108,8 @@ def main():
             topic=MQTT_HEARTBEAT_TOPIC,
             interval_sec=MQTT_HEARTBEAT_INTERVAL,
             tls_insecure=MQTT_TLS_INSECURE,
+            reset_topic=MQTT_RESET_TOPIC,
+            on_reset=queue_reset_request,
         )
         heartbeat.start()
         print(f"✅ MQTT heartbeat started: {MQTT_HEARTBEAT_TOPIC} (every {MQTT_HEARTBEAT_INTERVAL}s)")
@@ -135,9 +143,55 @@ def main():
     # Buffer for last 5 valid measurements
     valid_seam_buffer = deque([6.5] * 5, maxlen=5)
     valid_width_buffer = deque([3.9] * 5, maxlen=5)
+    RESET_POST_DELAY_SEC = 2.0
+
+    def perform_reset():
+        nonlocal total_distance_mm, last_stitch_count
+
+        db_success = False
+        serial_success = False
+
+        if db:
+            db_success = db.insert_measurement(
+                total_distance=0.0,
+                stitch_length=0.0,
+                seam_allowance=0.0,
+            )
+            if db_success:
+                print("✅ Reset DB insert succeeded (all zeros)")
+            else:
+                print("❌ Reset DB insert failed")
+        else:
+            print("⚠️ Reset DB insert skipped: DB unavailable")
+
+        if serial_reader:
+            serial_success = serial_reader.send_command("R")
+            if serial_success:
+                print("✅ Serial reset command sent: R")
+            else:
+                print("❌ Serial reset command failed: R")
+        else:
+            print("⚠️ Serial reset skipped: serial unavailable")
+
+        time.sleep(RESET_POST_DELAY_SEC)
+
+        total_distance_mm = 0.0
+        last_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
+        valid_seam_buffer.clear()
+        valid_seam_buffer.extend([6.5] * 5)
+        valid_width_buffer.clear()
+        valid_width_buffer.extend([3.9] * 5)
+        print("🔄 Runtime counters and smoothing buffers reset")
+
+        if db_success and serial_success and heartbeat:
+            heartbeat.publish_reset_success()
 
     try:
         while True:
+            if reset_requested.is_set():
+                reset_requested.clear()
+                perform_reset()
+
             ret, frame = measurement_app.cap.read()
             if not ret:
                 CAMERA_RECONNECT_ATTEMPTS += 1
