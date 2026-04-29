@@ -101,10 +101,18 @@ SEAM_ALLOWANCE_OFFSET_MM = float(os.getenv('SEAM_ALLOWANCE_OFFSET_MM', 4.5))    
 #---------------------
 # valid measuremnets range
 #---------------------
-Seam_upper_limit = 8.0 # mm — if seam length exceeds this, it's likely a false positive
-stitch_upper_limit = 4.4# mm — if stitch width exceeds this, it's likely a false positive
+Seam_upper_limit = 7.5 # mm — if seam length exceeds this, it's likely a false positive
+stitch_upper_limit = 4.5# mm — if stitch width exceeds this, it's likely a false positive
 Seam_lower_limit=3.5 # mm — if seam length is below this, it's likely a false positive
-stitch_lower_limit=2.6 # mm — if stitch width is below this, it's likely a false positive   
+stitch_lower_limit=2.5 # mm — if stitch width is below this, it's likely a false positive   
+
+
+#-----------------------
+# outlier confirmation settings 
+#-----------------------
+
+CONFIRM_CONSECUTIVE = 3 # number of consecutive out-of-range measurements for treat that as a real value 
+CONFIRM_TOLERANCE_MM = 0.55 # mm — how close consecutive out
 
 
 # -------------------------
