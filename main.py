@@ -67,7 +67,12 @@ def main():
     if db:
         last_date=db.get_last_record_date()
         today=datetime.now().date()
-        if last_date!=today:
+        
+        if last_date is None:
+            db.insert_measurement(total_distance=0.0, stitch_length=0.0, seam_allowance=0.0)
+            print("📊 No previous records - total distance initialized to 0")
+
+        elif last_date!=today:
             db.insert_measurement(
                 total_distance=0.0,
                 stitch_length=0.0,
@@ -126,6 +131,7 @@ def main():
     last_inference_time = 0
     frame_count = 0
     last_stitch_count = 0
+    stitch_delta = 0
     total_distance_mm = float(db.get_last_record_total_distance() if db else 0.0)  # Start from last recorded total distance if DB is available, else 0.0
     if LOG_DEBUG:
         print(f"📊 Starting total distance: {total_distance_mm:.2f}mm")
@@ -139,15 +145,23 @@ def main():
     CAMERA_RECONNECT_ATTEMPTS = 0
     MAX_RECONNECT_ATTEMPTS = 10
 
+    # Raw-history buffers (post-offset) used to detect sustained changes
+    raw_seam_history = deque(maxlen=10)
+    raw_width_history = deque(maxlen=10)
 
     # Buffer for last 5 valid measurements
-    valid_seam_buffer = deque([6.5] * 5, maxlen=5)
-    valid_width_buffer = deque([3.9] * 5, maxlen=5)
-    RESET_POST_DELAY_SEC = 2.0
+        # valid_seam_buffer = deque([6.5] * 5, maxlen=5)
+        # valid_width_buffer = deque([3.9] * 5, maxlen=5)
+    valid_seam_buffer=deque(maxlen=5)
+    valid_width_buffer=deque(maxlen=5)
+
+    RESET_POST_DELAY_SEC = 2.0 
 
     def perform_reset():
-        nonlocal total_distance_mm, last_stitch_count
+        nonlocal total_distance_mm, last_stitch_count,stitch_delta
 
+        stitch_delta=0
+        
         db_success = False
         serial_success = False
 
@@ -178,9 +192,9 @@ def main():
         total_distance_mm = 0.0
         last_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
         valid_seam_buffer.clear()
-        valid_seam_buffer.extend([6.5] * 5)
+        #valid_seam_buffer.extend([6.5] * 5)
         valid_width_buffer.clear()
-        valid_width_buffer.extend([3.9] * 5)
+        # valid_width_buffer.extend([3.9] * 5)
         print("🔄 Runtime counters and smoothing buffers reset")
 
         if db_success and serial_success and heartbeat:
@@ -217,7 +231,7 @@ def main():
                 current_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
 
                 # Calculate movement based on stitch count change
-                stitch_delta = current_stitch_count - last_stitch_count
+                stitch_delta += current_stitch_count - last_stitch_count
                 last_stitch_count = current_stitch_count
 
                 # getting the measurements 
@@ -225,8 +239,15 @@ def main():
                 stitch_width_mm = measurements.get('stitch_width_mm', None)
 
                 #applying the offsets
-                seam_length_mm = seam_length_mm+SEAM_ALLOWANCE_OFFSET_MM if seam_length_mm is not None else seam_length_mm
-                stitch_width_mm = stitch_width_mm+STITCH_LENGTH_OFFSET_MM if stitch_width_mm is not None else stitch_width_mm
+                if seam_length_mm is not None:
+                    seam_length_mm += SEAM_ALLOWANCE_OFFSET_MM 
+                    cv2.putText(annotated, f"Adjusted seam: {seam_length_mm:.2f}mm", (20, 90),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+                if stitch_width_mm is not None:
+                    stitch_width_mm += STITCH_LENGTH_OFFSET_MM
+                    cv2.putText(annotated, f"Adjusted width: {stitch_width_mm:.2f}mm", (20, 120),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
                 if LOG_DEBUG:
                     print(f"🔍 Raw measurements: seam={measurements.get('edge_distance_mm', 'N/A')}mm, "
@@ -245,10 +266,38 @@ def main():
                     and stitch_lower_limit < stitch_width_mm < stitch_upper_limit
                 )
 
+                 # store offset-applied raw values for history checks
+                if seam_length_mm is not None:
+                    raw_seam_history.append(seam_length_mm)
+                if stitch_width_mm is not None:
+                    raw_width_history.append(stitch_width_mm)
+
+                
+                confirmed_override = False
+
+                # If seam is above soft upper limit, check for N consecutive similar samples -> accept
+                if not valid_seam and seam_length_mm is not None and seam_length_mm > Seam_upper_limit:
+                    recent = [v for v in list(raw_seam_history)[-CONFIRM_CONSECUTIVE:] if v is not None]
+                    if len(recent) >= CONFIRM_CONSECUTIVE and all(v > Seam_upper_limit - CONFIRM_TOLERANCE_MM for v in recent):
+                        valid_seam = True
+                        confirmed_override = True
+
+                # For small/too-low measurements: ignore (do not confirm below lower bound)
+                # If stitch width is above soft upper limit, check similarly
+                if not valid_stitch and stitch_width_mm is not None and stitch_width_mm > stitch_upper_limit:
+                    recent_w = [v for v in list(raw_width_history)[-CONFIRM_CONSECUTIVE:] if v is not None]
+                    if len(recent_w) >= CONFIRM_CONSECUTIVE and all(v > stitch_upper_limit - CONFIRM_TOLERANCE_MM for v in recent_w):
+                        valid_stitch = True
+                        confirmed_override = True
+
+
                 has_valid_measurement = valid_seam and valid_stitch  
 
                 # If valid, save to buffer
                 if has_valid_measurement:
+                    if confirmed_override:
+                        valid_seam_buffer.clear()
+                        valid_width_buffer.clear()
                     valid_seam_buffer.append(seam_length_mm)
                     valid_width_buffer.append(stitch_width_mm)
                     if LOG_DEBUG:
@@ -283,12 +332,16 @@ def main():
 
                     info_text = (f"Count: {current_stitch_count} | Count_delta: {stitch_delta} | Moved: {moved_distance_mm:.2f}mm | "
                                f"Total: {total_distance_mm:.2f}mm | Seam: {seam_length_mm:.2f}mm")
-                    if stitch_width_mm and stitch_delta > 0:
+                    if stitch_width_mm is not None:
                         info_text += f" | Width: {stitch_width_mm:.2f}mm"
 
                     cv2.putText(annotated, info_text, (10, annotated.shape[0] - 40),
                               cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                    
+                    stitch_delta=0 # reset the stich delta
                     print(f"📏 {info_text}")
+          
+
                 else:
                     cv2.putText(annotated, f"Stitch count: {current_stitch_count} (waiting for measurements)",
                               (10, annotated.shape[0] - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
