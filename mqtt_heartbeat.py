@@ -16,6 +16,7 @@ class MqttHeartbeat(threading.Thread):
         tls_insecure=False,
         reset_topic=None,
         on_reset=None,
+        camera_issue_topic=None,
     ):
         super().__init__(daemon=True)
         self.broker = broker
@@ -27,6 +28,7 @@ class MqttHeartbeat(threading.Thread):
         self.tls_insecure = tls_insecure
         self.reset_topic = reset_topic
         self.on_reset = on_reset
+        self.camera_issue_topic = camera_issue_topic
 
         self._stop_event = threading.Event()
 
@@ -68,11 +70,25 @@ class MqttHeartbeat(threading.Thread):
             except Exception as exc:
                 print(f"❌ MQTT reset callback failed: {exc}")
 
+    def _publish_to_topic(self, topic, payload):
+        """Internal helper to publish to a topic with error handling."""
+        try:
+            self.client.publish(topic, payload=payload, qos=0, retain=False)
+        except Exception as exc:
+            print(f"❌ MQTT publish failed: {exc}")
+
     def publish_reset_success(self):
         if not self.reset_topic:
             return
-        self.client.publish(self.reset_topic, payload="reset_success", qos=0, retain=False)
+        self._publish_to_topic(self.reset_topic, "reset_success")
         print(f"✅ MQTT published reset_success to topic: {self.reset_topic}")
+
+    def publish_camera_issue(self):
+        """Publish camera issue status to camera_issue topic."""
+        if not self.camera_issue_topic:
+            return
+        self._publish_to_topic(self.camera_issue_topic, "issue")
+        print(f"⚠️ MQTT published camera issue to topic: {self.camera_issue_topic}")
 
     def run(self):
         self.client.connect(self.broker, self.port, keepalive=30)
