@@ -119,6 +119,7 @@ def main():
             tls_insecure=MQTT_TLS_INSECURE,
             reset_topic=MQTT_RESET_TOPIC,
             on_reset=queue_reset_request,
+            camera_issue_topic=MQTT_CAMERA_ISSUE_TOPIC,
         )
         heartbeat.start()
         print(tf(), f"✅ MQTT heartbeat started: {MQTT_HEARTBEAT_TOPIC} (every {MQTT_HEARTBEAT_INTERVAL}s)")
@@ -217,6 +218,14 @@ def main():
 
                 if CAMERA_RECONNECT_ATTEMPTS >= MAX_RECONNECT_ATTEMPTS:
                     print(tf(), "❌ Camera disconnected. Attempting to reconnect...")
+                    
+                    if heartbeat:
+                        try:
+                            heartbeat.publish_camera_issue()
+                        except Exception as e:
+                            if LOG_DEBUG:
+                                print(tf(), f"❌ Failed to publish camera issue: {e}")
+                    
                     measurement_app.cap.release()
                     time.sleep(1)
                     measurement_app.cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
