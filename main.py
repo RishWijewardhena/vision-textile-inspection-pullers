@@ -162,6 +162,10 @@ def main():
 
     RESET_POST_DELAY_SEC = 2.0 
 
+    # reset the ESP32 at startup to ensure it’s in a known state (and to clear any accumulated stitch count)
+    if serial_reader:
+        serial_success = serial_reader.send_command("R")
+
     def perform_reset():
         nonlocal total_distance_mm, last_stitch_count,stitch_delta
 
@@ -233,7 +237,7 @@ def main():
                     CAMERA_RECONNECT_ATTEMPTS = 0
 
                 time.sleep(0.1)
-                continue
+                continue    
 
             CAMERA_RECONNECT_ATTEMPTS = 0  # Reset on successful frame
             current_time = time.time()
