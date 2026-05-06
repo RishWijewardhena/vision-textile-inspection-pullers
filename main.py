@@ -215,17 +215,17 @@ def main():
             if not ret:
                 CAMERA_RECONNECT_ATTEMPTS += 1
                 print(tf(), f"⚠️ No frame from camera (attempt {CAMERA_RECONNECT_ATTEMPTS}/{MAX_RECONNECT_ATTEMPTS})")
+                
+                if heartbeat:
+                    try:
+                        heartbeat.publish_camera_issue()
+                    except Exception as e:
+                        if LOG_DEBUG:
+                            print(tf(), f"❌ Failed to publish camera issue: {e}")
 
                 if CAMERA_RECONNECT_ATTEMPTS >= MAX_RECONNECT_ATTEMPTS:
+
                     print(tf(), "❌ Camera disconnected. Attempting to reconnect...")
-                    
-                    if heartbeat:
-                        try:
-                            heartbeat.publish_camera_issue()
-                        except Exception as e:
-                            if LOG_DEBUG:
-                                print(tf(), f"❌ Failed to publish camera issue: {e}")
-                    
                     measurement_app.cap.release()
                     time.sleep(1)
                     measurement_app.cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
