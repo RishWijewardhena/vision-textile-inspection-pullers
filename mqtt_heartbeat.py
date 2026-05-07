@@ -88,7 +88,7 @@ class MqttHeartbeat(threading.Thread):
         if not self.camera_issue_topic:
             return
         self._publish_to_topic(self.camera_issue_topic, "issue")
-        print(f"⚠️ MQTT published camera issue to topic: {self.camera_issue_topic}")
+        print(f" MQTT published camera issue to topic: {self.camera_issue_topic}")
 
     def run(self):
         self.client.connect(self.broker, self.port, keepalive=30)
