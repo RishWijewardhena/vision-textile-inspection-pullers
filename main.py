@@ -9,6 +9,7 @@ import cv2
 from datetime import datetime
 from collections import deque
 import random 
+import subprocess
 
 # Import all modules
 from config import *
@@ -21,6 +22,18 @@ from mqtt_heartbeat import MqttHeartbeat
 def tf():
     ''' return the current timestamp in format [HH:MM:SS] '''
     return datetime.now().strftime("[%H:%M:%S]")
+
+
+def reload_camera():
+    """Reload webcam driver (uvcvideo)."""
+    print(tf() + " 🔄 Reloading webcam driver...")
+    try:
+        subprocess.run(["sudo", "modprobe", "-r", "uvcvideo"], check=True)
+        subprocess.run(["sudo", "modprobe", "uvcvideo"], check=True)
+        print(tf() + " ✅ Webcam driver reloaded")
+    except subprocess.CalledProcessError as e:
+        print(tf() + f" ⚠️ Failed to reload webcam driver: {e}")
+
 
 
 def main():
@@ -232,6 +245,8 @@ def main():
                     print(tf(), " Camera disconnected. Attempting to reconnect...")
                     measurement_app.cap.release()
                     time.sleep(1)
+
+                    reload_camera()  # reload the camera for a fresh start
                     measurement_app.cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
                     force_camera_resolution(measurement_app.cap, CALIB_W, CALIB_H)
                     CAMERA_RECONNECT_ATTEMPTS = 0
