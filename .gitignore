@@ -5,3 +5,6 @@ saved_annotations/
 test.py
 logs/
 Utils/Photos
+camera_calibration.json
+camera_extrinsics.json
+
