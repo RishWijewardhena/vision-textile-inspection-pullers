@@ -35,7 +35,6 @@ def reload_camera():
         print(tf() + f" ⚠️ Failed to reload webcam driver: {e}")
 
 
-
 def main():
     """Main application loop"""
     print(tf(), "\n" + "="*60)
@@ -164,8 +163,8 @@ def main():
     MAX_RECONNECT_ATTEMPTS = 10
 
     # Raw-history buffers (post-offset) used to detect sustained changes
-    raw_seam_history = deque(maxlen=10)
-    raw_width_history = deque(maxlen=10)
+    raw_seam_history = deque(maxlen=20)
+    raw_width_history = deque(maxlen=20)
 
     # Buffer for last 5 valid measurements
         # valid_seam_buffer = deque([6.5] * 5, maxlen=5)
