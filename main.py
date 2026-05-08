@@ -179,11 +179,12 @@ def main():
         serial_success = serial_reader.send_command("R")
         serial_reader.reset_input_buffer()  # Clear any old data after reset command
         time.sleep(2)
-        print(tf(), f"🔄 Sent initial reset command to ESP32 at startup: {'Success' if serial_success else 'Failed'}")
+        print(tf(), f"\n🔄 Sent initial reset command to ESP32 at startup: {'Success' if serial_success else 'Failed'}")
 
 
     # Initialize total distance and stitch count from DB and serial at startup to allow continuity if system restarts
     last_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
+    print(tf(), f"📊 Starting stitch count: {last_stitch_count} (from serial)")
 
     #retrieve last 5 records from DB to pre-fill smoothing buffers and continue from previous session trends if available
     def initialize_buffers_from_db():
