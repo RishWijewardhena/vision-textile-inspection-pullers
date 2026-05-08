@@ -79,7 +79,7 @@ ROI_SECTION_START = 4     # 0-based index of first ROI section (4th section)
 ROI_SECTION_END =  7   # 0-based index of last ROI section exclusive (sections 4 and 5)
 
 # Outlier filtering for per-frame measurements before mean calculation
-OUTLIER_MIN_SAMPLES = 4   # apply outlier filter only when this many values exist
+OUTLIER_MIN_SAMPLES = 3   # apply outlier filter only when this many values exist
 OUTLIER_MAD_SCALE = 1.35   # larger value = less aggressive filtering
 
 # -------------------------
@@ -111,7 +111,7 @@ stitch_lower_limit=2.5 # mm — if stitch width is below this, it's likely a fal
 # outlier confirmation settings 
 #-----------------------
 
-CONFIRM_CONSECUTIVE = 3 # number of consecutive out-of-range measurements for treat that as a real value 
+CONFIRM_CONSECUTIVE = 8 # number of consecutive out-of-range measurements for treat that as a real value 
 CONFIRM_TOLERANCE_MM = 0.55 # mm — how close consecutive out
 
 
