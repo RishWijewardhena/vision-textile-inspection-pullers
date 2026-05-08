@@ -178,7 +178,7 @@ def main():
     if serial_reader:
         serial_success = serial_reader.send_command("R")
         serial_reader.reset_input_buffer()  # Clear any old data after reset command
-        time.sleep(2)
+        time.sleep(10)
         print(tf(), f"\n🔄 Sent initial reset command to ESP32 at startup: {'Success' if serial_success else 'Failed'}")
 
 
