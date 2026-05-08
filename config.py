@@ -80,7 +80,7 @@ ROI_SECTION_END =  7   # 0-based index of last ROI section exclusive (sections 4
 
 # Outlier filtering for per-frame measurements before mean calculation
 OUTLIER_MIN_SAMPLES = 4   # apply outlier filter only when this many values exist
-OUTLIER_MAD_SCALE = 3.0   # larger value = less aggressive filtering
+OUTLIER_MAD_SCALE = 1.35   # larger value = less aggressive filtering
 
 # -------------------------
 # Serial Communication
@@ -96,7 +96,7 @@ SERIAL_TIMEOUT = 1.0
 # offset correction for stitch length and seam allowance
 # --------------------------
 STITCH_LENGTH_OFFSET_MM = float(os.getenv('STITCH_LENGTH_OFFSET_MM', -0.3))  # Adjust this value based on calibration (negative to reduce measured length)
-SEAM_ALLOWANCE_OFFSET_MM = float(os.getenv('SEAM_ALLOWANCE_OFFSET_MM', 4.5))          # Add this value to final stitch length 
+SEAM_ALLOWANCE_OFFSET_MM = float(os.getenv('SEAM_ALLOWANCE_OFFSET_MM', 3.5))          # Add this value to final stitch length 
 
 #---------------------
 # valid measuremnets range
