@@ -54,6 +54,15 @@ class SerialReader:
             self.serial_conn = None
             self._try_reconnect()
             return False
+
+    def reset_input_buffer(self):
+        """Clear the serial input buffer to discard stale data."""
+        if self.serial_conn and self.serial_conn.is_open:
+            try:
+                with self._serial_lock:
+                    self.serial_conn.reset_input_buffer()
+            except Exception as e:
+                print(f"⚠️ Failed to reset input buffer: {e}")
         
     def connect(self):
         """Establish serial connection"""
