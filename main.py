@@ -147,7 +147,7 @@ def main():
     # Step 2: Main measurement loop
     last_inference_time = 0
     frame_count = 0
-    last_stitch_count = 0
+
     stitch_delta = 0
     total_distance_mm = float(db.get_last_record_total_distance() if db else 0.0)  # Start from last recorded total distance if DB is available, else 0.0
     if LOG_DEBUG:
@@ -163,8 +163,8 @@ def main():
     MAX_RECONNECT_ATTEMPTS = 10
 
     # Raw-history buffers (post-offset) used to detect sustained changes
-    raw_seam_history = deque(maxlen=20)
-    raw_width_history = deque(maxlen=20)
+    raw_seam_history = deque(maxlen=10)
+    raw_width_history = deque(maxlen=10)
 
     # Buffer for last 5 valid measurements
         # valid_seam_buffer = deque([6.5] * 5, maxlen=5)
@@ -177,6 +177,32 @@ def main():
     # reset the ESP32 at startup to ensure it’s in a known state (and to clear any accumulated stitch count)
     if serial_reader:
         serial_success = serial_reader.send_command("R")
+        serial_reader.reset_input_buffer()  # Clear any old data after reset command
+        time.sleep(2)
+        print(tf(), f"🔄 Sent initial reset command to ESP32 at startup: {'Success' if serial_success else 'Failed'}")
+
+
+    # Initialize total distance and stitch count from DB and serial at startup to allow continuity if system restarts
+    last_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
+
+    #retrieve last 5 records from DB to pre-fill smoothing buffers and continue from previous session trends if available
+    def initialize_buffers_from_db():
+        if db:
+            last_records = db.get_last_n_records(5)
+            print(tf() + f" 📊 Retrieved last {len(last_records)} records from DB \n {last_records}")
+            for record in last_records:
+                if record['seam_allowance'] is not None and Seam_lower_limit < record['seam_allowance'] < Seam_upper_limit:
+                    valid_seam_buffer.append(float(record['seam_allowance']))
+                if record['stitch_length'] is not None and stitch_lower_limit < record['stitch_length'] < stitch_upper_limit:
+                    valid_width_buffer.append(float(record['stitch_length']))
+            print(tf() + f" 📊 Pre-filled smoothing buffers with last {len(valid_seam_buffer)} seam and {len(valid_width_buffer)} width measurements from DB")
+        
+
+        print(tf() + f" 📊 Initial valid seam buffer: {list(valid_seam_buffer)}")
+        print(tf() + f" 📊 Initial valid width buffer: {list(valid_width_buffer)}")
+
+    #initialize smoothing buffers with recent DB values to allow smoother startup if historical data exists
+    initialize_buffers_from_db()
 
     def perform_reset():
         nonlocal total_distance_mm, last_stitch_count,stitch_delta
@@ -213,9 +239,10 @@ def main():
         total_distance_mm = 0.0
         last_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
         valid_seam_buffer.clear()
-        #valid_seam_buffer.extend([6.5] * 5)
         valid_width_buffer.clear()
-        # valid_width_buffer.extend([3.9] * 5)
+
+        # Re-populate buffers from DB after reset to maintain continuity if data exists
+        initialize_buffers_from_db()  
         print(tf(), "🔄 Runtime counters and smoothing buffers reset")
 
         if db_success and serial_success and heartbeat:
@@ -281,9 +308,9 @@ def main():
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
                 if LOG_DEBUG:
-                      print(tf(), f"🔍 Raw measurements: seam={measurements.get('edge_distance_mm', 'N/A')}mm, "
+                      print(tf(), f" Raw measurements: seam={measurements.get('edge_distance_mm', 'N/A')}mm, "
                           f"width={measurements.get('stitch_width_mm', 'N/A')}mm")
-                      print(tf(), f"⚙️ Adjusted measurements: seam={seam_length_mm if seam_length_mm is not None else 'N/A'}mm, "
+                      print(tf(), f" Adjusted measurements: seam={seam_length_mm if seam_length_mm is not None else 'N/A'}mm, "
                           f"width={stitch_width_mm if stitch_width_mm is not None else 'N/A'}mm")
 
                 # Determine if this is a valid measurement
