@@ -369,7 +369,7 @@ def main():
                     stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)+random.uniform(-0.08, 0.08)
                     has_valid_measurement = True
                     if LOG_DEBUG:
-                        print(tf(), f"📊 Using buffered average: seam={seam_length_mm:.2f}mm, "
+                        print(tf(), f" Using buffered average: seam={seam_length_mm:.2f}mm, "
                               f"width={stitch_width_mm:.2f}mm (from {len(valid_seam_buffer)} samples)")
                 else:
                     if LOG_DEBUG and stitch_delta > 0:
