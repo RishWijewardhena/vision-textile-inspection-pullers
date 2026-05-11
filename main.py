@@ -340,6 +340,7 @@ def main():
                     if len(recent) >= CONFIRM_CONSECUTIVE and all(v > Seam_upper_limit - CONFIRM_TOLERANCE_MM for v in recent):
                         valid_seam = True
                         confirmed_override = True
+                        print(tf(), f"!! Confirmed valid seam measurement above upper limit based on recent history: {recent[-CONFIRM_CONSECUTIVE:]}")
 
                 # For small/too-low measurements: ignore (do not confirm below lower bound)
                 # If stitch width is above soft upper limit, check similarly
@@ -348,7 +349,7 @@ def main():
                     if len(recent_w) >= CONFIRM_CONSECUTIVE and all(v > stitch_upper_limit - CONFIRM_TOLERANCE_MM for v in recent_w):
                         valid_stitch = True
                         confirmed_override = True
-
+                        print(tf(), f"!! Confirmed valid stitch measurement above upper limit based on recent history: {recent_w[-CONFIRM_CONSECUTIVE:]}")
 
                 has_valid_measurement = valid_seam and valid_stitch  
 
