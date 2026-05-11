@@ -63,7 +63,7 @@ MAX_DETECTIONS = 24 # max detections per frame to consider (to prevent outliers 
 # -------------------------
 # Measurement Settings
 # -------------------------
-FRAME_BUFFER = 8          # median filter across frames
+FRAME_BUFFER = 4          # median filter across frames
 MIN_STITCHES = 2         # minimum stitches to compute average
 
 # Buffer initialization values (comma-separated floats, max 5 each)
@@ -145,7 +145,7 @@ LOG_DEBUG = True          # set True to print debug info
 # file cleaner 
 # ------------------------
 # Delete after 24 hours, check every hour
-FILE_RETENTION_HOURS = 24
+FILE_RETENTION_HOURS = 24*4
 FILE_CLEANUP_INTERVAL_SECONDS = 3600
 
 # -------------------------
