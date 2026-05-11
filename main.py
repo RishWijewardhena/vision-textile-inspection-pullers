@@ -132,6 +132,7 @@ def main():
             reset_topic=MQTT_RESET_TOPIC,
             on_reset=queue_reset_request,
             camera_issue_topic=MQTT_CAMERA_ISSUE_TOPIC,
+            esp32_issue_topic=MQTT_ESP32_ISSUE_TOPIC
         )
         heartbeat.start()
         print(tf(), f"✅ MQTT heartbeat started: {MQTT_HEARTBEAT_TOPIC} (every {MQTT_HEARTBEAT_INTERVAL}s)")
@@ -254,6 +255,15 @@ def main():
             if reset_requested.is_set():
                 reset_requested.clear()
                 perform_reset()
+            
+            if not serial_reader:
+                time.sleep(1)  # Avoid busy loop if serial reader is unavailable
+                if heartbeat:
+                    try:
+                        heartbeat.publish_esp32_issue()
+                    except Exception as e:
+                        if LOG_DEBUG:
+                            print(tf(), f"❌ Failed to publish ESP32 issue: {e}")
 
             ret, frame = measurement_app.cap.read()
             if not ret:
