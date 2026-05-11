@@ -17,6 +17,7 @@ class MqttHeartbeat(threading.Thread):
         reset_topic=None,
         on_reset=None,
         camera_issue_topic=None,
+        esp32_issue_topic=None
     ):
         super().__init__(daemon=True)
         self.broker = broker
@@ -29,6 +30,7 @@ class MqttHeartbeat(threading.Thread):
         self.reset_topic = reset_topic
         self.on_reset = on_reset
         self.camera_issue_topic = camera_issue_topic
+        self.esp32_issue_topic = esp32_issue_topic
 
         self._stop_event = threading.Event()
 
@@ -89,6 +91,13 @@ class MqttHeartbeat(threading.Thread):
             return
         self._publish_to_topic(self.camera_issue_topic, "issue")
         print(f" MQTT published camera issue to topic: {self.camera_issue_topic}")
+
+    def publish_esp32_issue(self):
+        """Publish ESP32 issue status to esp32_issue topic."""
+        if not self.esp32_issue_topic:
+            return
+        self._publish_to_topic(self.esp32_issue_topic, "issue")
+        print(f" MQTT published ESP32 issue to topic: {self.esp32_issue_topic}")
 
     def run(self):
         self.client.connect(self.broker, self.port, keepalive=30)
