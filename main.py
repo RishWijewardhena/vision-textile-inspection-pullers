@@ -256,7 +256,7 @@ def main():
                 reset_requested.clear()
                 perform_reset()
             
-            if not serial_reader:
+            if not serial_reader or not serial_reader._is_connected():
                 time.sleep(1)  # Avoid busy loop if serial reader is unavailable
                 if heartbeat:
                     try:
