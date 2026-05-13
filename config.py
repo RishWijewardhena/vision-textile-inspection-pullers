@@ -156,7 +156,7 @@ SHOW_WINDOWS = False
 # -------------------------
 # Image Saving Options
 # -------------------------
-SAVE_UNANNOTATED_IMAGE = True  # Set to False to save only annotated frames
+SAVE_UNANNOTATED_IMAGE = False  # Set to False to save only annotated frames
 
 # -------------------------
 # MQTT Config (Heartbeat)
