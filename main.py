@@ -419,6 +419,13 @@ def main():
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 save_path = os.path.join(session_dir, f"frame_{frame_count:05d}_{timestamp}.jpg")
                 cv2.imwrite(save_path, annotated)
+                
+                # Save unannotated frame to Photos subdirectory if enabled
+                if SAVE_UNANNOTATED_IMAGE:
+                    photos_dir = os.path.join(session_dir, "Photos")
+                    os.makedirs(photos_dir, exist_ok=True)
+                    raw_save_path = os.path.join(photos_dir, f"original_frame_{frame_count:05d}_{timestamp}.jpg")
+                    cv2.imwrite(raw_save_path, frame)
 
                 if SHOW_WINDOWS:
                     cv2.imshow("Stitch Measurement System", annotated)

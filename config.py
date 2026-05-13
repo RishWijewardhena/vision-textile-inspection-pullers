@@ -154,6 +154,11 @@ FILE_CLEANUP_INTERVAL_SECONDS = 3600
 SHOW_WINDOWS = False
 
 # -------------------------
+# Image Saving Options
+# -------------------------
+SAVE_UNANNOTATED_IMAGE = True  # Set to False to save only annotated frames
+
+# -------------------------
 # MQTT Config (Heartbeat)
 # -------------------------
 MQTT_SERVER = os.getenv("MQTT_SERVER","mqtt.anc.idea8.cloud") #if you cannot get the value from .env, use this default
