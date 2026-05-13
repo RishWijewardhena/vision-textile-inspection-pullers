@@ -113,6 +113,10 @@ class SerialReader:
 
         self._refresh_port()   # <- re-detect ESP32 each reconnect attempt
         self.connect()
+    
+    def _is_connected(self):
+        """Check if serial connection is active"""
+        return self.serial_conn and self.serial_conn.is_open
 
     def read_serial_data(self):
         """Read serial bytes, keep partial lines, and return one parsed stitch count if available."""
