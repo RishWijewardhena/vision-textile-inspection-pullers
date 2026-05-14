@@ -15,7 +15,7 @@ import subprocess
 from config import *
 from serial_reader import SerialReader
 from database import DatabaseHandler
-from measurement import StitchMeasurementApp, force_camera_resolution
+from measurement import StitchMeasurementApp
 from file_cleaner import FileCleanerThread
 from mqtt_heartbeat import MqttHeartbeat
 
@@ -280,12 +280,13 @@ def main():
                 if CAMERA_RECONNECT_ATTEMPTS >= MAX_RECONNECT_ATTEMPTS:
 
                     print(tf(), " Camera disconnected. Attempting to reconnect...")
-                    measurement_app.cap.release()
                     time.sleep(1)
 
                     reload_camera()  # reload the camera for a fresh start
-                    measurement_app.cap = cv2.VideoCapture(CAMERA_INDEX, cv2.CAP_V4L2)
-                    force_camera_resolution(measurement_app.cap, CALIB_W, CALIB_H)
+                    if measurement_app.reopen_camera(CALIB_W, CALIB_H):
+                        print(tf(), "✅ Camera reconnected")
+                    else:
+                        print(tf(), "❌ Camera reopen failed; will retry")
                     CAMERA_RECONNECT_ATTEMPTS = 0
 
                 time.sleep(0.1)
