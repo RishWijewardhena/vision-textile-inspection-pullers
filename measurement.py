@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 
 from config import *
+from hardware_utils import open_v4l2_camera
 
 # -------------------------
 # Helper Functions
@@ -18,6 +19,12 @@ def load_json(path):
         return json.load(f)
 
 def force_camera_resolution(cap, w, h):
+    if cap is None or not cap.isOpened():
+        print(f"Warning: camera is not open, expected {w}x{h}")
+        return 0, 0
+
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
     # cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)      # Manual                                                                                                                                  
@@ -142,7 +149,8 @@ class StitchMeasurementApp:
         self.n_c, self.d_c = compute_camera_plane(self.R, self.t)
 
         self.model = YOLO(model_path)
-        self.cap   = cv2.VideoCapture(camera_index, cv2.CAP_V4L2)
+        self.camera_index = camera_index
+        self.cap   = open_v4l2_camera(camera_index)
         self.aw, self.ah = force_camera_resolution(self.cap, calib_w, calib_h)
 
         self.frame_buf_dist  = deque(maxlen=frame_buffer)
@@ -155,6 +163,24 @@ class StitchMeasurementApp:
         print("StitchMeasurementApp initialized.")
         if LOG_DEBUG:
             print("Plane normal:", self.n_c, "d_c:", self.d_c)
+
+    def reopen_camera(self, calib_w, calib_h, warmup_attempts=10):
+        if self.cap is not None:
+            self.cap.release()
+
+        self.cap = open_v4l2_camera(self.camera_index)
+        self.aw, self.ah = force_camera_resolution(self.cap, calib_w, calib_h)
+
+        if self.aw == 0 or self.ah == 0:
+            return False
+
+        for _ in range(warmup_attempts):
+            ret, frame = self.cap.read()
+            if ret and frame is not None and frame.size > 0:
+                return True
+            time.sleep(0.1)
+
+        return False
 
     def process_frame(self, frame):
         h, w = frame.shape[:2]
