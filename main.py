@@ -283,6 +283,7 @@ def main():
                     time.sleep(1)
 
                     reload_camera()  # reload the camera for a fresh start
+                    time.sleep(5)  # wait a moment for the system to stabilize after reload
                     if measurement_app.reopen_camera(CALIB_W, CALIB_H):
                         print(tf(), "✅ Camera reconnected")
                     else:
