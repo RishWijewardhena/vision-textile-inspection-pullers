@@ -40,11 +40,15 @@ def open_v4l2_camera(camera):
     camera_ref = camera_to_v4l2_index(camera)
     cap = cv2.VideoCapture(camera_ref, cv2.CAP_V4L2)
     if cap.isOpened():
+        # Force MJPG compression FIRST (before resolution settings for proper negotiation)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         return cap
 
     cap.release()
     if camera_ref != camera:
         cap = cv2.VideoCapture(camera)
+        # Force MJPG compression FIRST (before resolution settings for proper negotiation)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
     return cap
 
 
