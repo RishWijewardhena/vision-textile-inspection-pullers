@@ -25,6 +25,7 @@ def force_camera_resolution(cap, w, h):
 
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
     # cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)      # Manual                                                                                                                                  
