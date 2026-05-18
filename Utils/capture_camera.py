@@ -6,6 +6,9 @@ def capture_camera(save_dir="Photos",interval=2):
     os.makedirs(save_dir,exist_ok=True)
 
     cap = cv2.VideoCapture("/dev/video0")
+    # Force MJPG compression FIRST (before resolution settings for proper negotiation)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 960)
 
