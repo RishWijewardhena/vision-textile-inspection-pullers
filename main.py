@@ -132,7 +132,8 @@ def main():
             reset_topic=MQTT_RESET_TOPIC,
             on_reset=queue_reset_request,
             camera_issue_topic=MQTT_CAMERA_ISSUE_TOPIC,
-            esp32_issue_topic=MQTT_ESP32_ISSUE_TOPIC
+            esp32_issue_topic=MQTT_ESP32_ISSUE_TOPIC,
+            marker_issue_topic=MQTT_MARKER_ISSUE_TOPIC
         )
         heartbeat.start()
         print(tf(), f"✅ MQTT heartbeat started: {MQTT_HEARTBEAT_TOPIC} (every {MQTT_HEARTBEAT_INTERVAL}s)")
@@ -308,6 +309,15 @@ def main():
                 # getting the measurements 
                 seam_length_mm = measurements.get('edge_distance_mm', None)
                 stitch_width_mm = measurements.get('stitch_width_mm', None)
+
+                # Publish marker issue alert if marker is displaced (stitches + marker detected but seam calculation failed)
+                marker_displaced = measurements.get('marker_displaced', False)
+                if marker_displaced and heartbeat:
+                    try:
+                        heartbeat.publish_marker_issue()
+                    except Exception as e:
+                        if LOG_DEBUG:
+                            print(tf(), f"❌ Failed to publish marker issue: {e}")
 
                 #applying the offsets
                 if seam_length_mm is not None:
