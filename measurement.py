@@ -389,6 +389,9 @@ class StitchMeasurementApp:
 
         n_found = len(active_indices)
 
+        # Detect marker displacement: stitches + marker detected but no valid seam distances calculated
+        marker_displaced = len(stitch_masks) > 0 and marker_combined is not None and len(per_dists) == 0
+
         # Per-frame robust averaging with outlier rejection
         dist_mean, dist_inliers, dist_total = filtered_mean(
             per_dists,
@@ -437,7 +440,8 @@ class StitchMeasurementApp:
             'edge_distance_mm': smooth_dist,
             'stitch_width_mm':  smooth_width,
             'stitch_count':     n_found,
-            'timestamp':        datetime.now()
+            'timestamp':        datetime.now(),
+            'marker_displaced': marker_displaced
         }
 
     def get_single_measurement(self):
