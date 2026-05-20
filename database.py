@@ -54,6 +54,10 @@ class DatabaseHandler:
 
     def get_last_record_date(self):
         """Get the date of the last inserted record"""
+        if not self.connection or not self.connection.is_connected():
+            if not self.connect():
+                return None
+        
         try:
             query = f"SELECT timestamp FROM `{self.config['table']}` ORDER BY timestamp DESC LIMIT 1"
             self.cursor.execute(query)
@@ -67,6 +71,10 @@ class DatabaseHandler:
 
     def get_last_record_total_distance(self):
         """Get the total distance of the last inserted record"""
+        if not self.connection or not self.connection.is_connected():
+            if not self.connect():
+                return None
+        
         try:
             query = f"SELECT total_distance FROM `{self.config['table']}` ORDER BY timestamp DESC LIMIT 1"
             self.cursor.execute(query)
@@ -82,6 +90,10 @@ class DatabaseHandler:
 
     def get_last_n_records(self, n=5):
         """Get the last n records from the database"""
+        if not self.connection or not self.connection.is_connected():
+            if not self.connect():
+                return []
+        
         try:
             query = f"""
             SELECT `timestamp`, `stitch_length`, `seam_allowance`, `total_distance`
@@ -155,14 +167,13 @@ class DatabaseHandler:
             if not self.connect():
                 return None
         
-        query = f"""
-        SELECT `id`, `timestamp`, `stitch_length`, `seam_allowance`, `total_distance`
-        FROM `{self.config['table']}`
-        ORDER BY `timestamp` DESC
-        LIMIT 1
-        """
-        
         try:
+            query = f"""
+            SELECT `id`, `timestamp`, `stitch_length`, `seam_allowance`, `total_distance`
+            FROM `{self.config['table']}`
+            ORDER BY `timestamp` DESC
+            LIMIT 1
+            """
             self.cursor.execute(query)
             result = self.cursor.fetchone()
             if result:
