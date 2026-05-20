@@ -400,8 +400,8 @@ def main():
                               
                 elif len(valid_seam_buffer) > 0 and len(valid_width_buffer) > 0:
                     # No valid measurement — use average of last 5 if available
-                    seam_length_mm = sum(valid_seam_buffer) / len(valid_seam_buffer)+random.uniform(-0.1, 0.1)  # Add small random noise to avoid identical values
-                    stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)+random.uniform(-0.08, 0.08)
+                    seam_length_mm = sum(valid_seam_buffer) / len(valid_seam_buffer)
+                    stitch_width_mm = sum(valid_width_buffer) / len(valid_width_buffer)
                     has_valid_measurement = True
                     if LOG_DEBUG:
                         print(tf(), f" Using buffered average: seam={seam_length_mm:.2f}mm, "
