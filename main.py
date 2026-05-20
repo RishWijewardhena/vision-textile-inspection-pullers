@@ -75,12 +75,13 @@ def main():
     
     # Initialize database
     db = DatabaseHandler()
-    if not db.connect():
-        print(tf(), "❌ Database connection failed - continuing without DB")
-        db = None
-
+    db_connected = db.connect()
+    if not db_connected:
+        print(tf(), "⚠️ Database connection failed at startup - will retry on next measurement")
+    
+    # Note: db object is kept even if connection fails, so reconnection can be attempted during measurement inserts
     # reset the total distance in the database to 0 at startup
-    if db:
+    if db_connected:
         last_date=db.get_last_record_date()
         today=datetime.now().date()
         
@@ -215,18 +216,16 @@ def main():
         db_success = False
         serial_success = False
 
-        if db:
-            db_success = db.insert_measurement(
-                total_distance=0.0,
-                stitch_length=0.0,
-                seam_allowance=0.0,
-            )
-            if db_success:
-                print(tf(), "✅ Reset DB insert succeeded (all zeros)")
-            else:
-                print(tf(), "❌ Reset DB insert failed")
+        # Attempt DB reset insert (will retry connection if needed)
+        db_success = db.insert_measurement(
+            total_distance=0.0,
+            stitch_length=0.0,
+            seam_allowance=0.0,
+        )
+        if db_success:
+            print(tf(), "✅ Reset DB insert succeeded (all zeros)")
         else:
-            print(tf(), "⚠️ Reset DB insert skipped: DB unavailable")
+            print(tf(), "⚠️ Reset DB insert failed (will retry on next measurement)")
 
         if serial_reader:
             serial_success = serial_reader.send_command("R")
@@ -403,14 +402,14 @@ def main():
                     moved_distance_mm = stitch_delta * stitch_width_mm
                     total_distance_mm += moved_distance_mm
 
-                    if db:
-                        success = db.insert_measurement(
-                            total_distance=round(total_distance_mm, 1),
-                            stitch_length=round(stitch_width_mm, 1),
-                            seam_allowance=round(seam_length_mm, 1)
-                        )
-                        if not success:
-                            print(tf(), "⚠️ Database insert failed - will retry on next valid measurement")
+                    # Attempt DB insert; will retry connection if needed
+                    success = db.insert_measurement(
+                        total_distance=round(total_distance_mm, 1),
+                        stitch_length=round(stitch_width_mm, 1),
+                        seam_allowance=round(seam_length_mm, 1)
+                    )
+                    if not success:
+                        print(tf(), "⚠️ Database insert failed - will retry on next valid measurement")
 
                     info_text = (f"Count: {current_stitch_count} | Count_delta: {stitch_delta} | Moved: {moved_distance_mm:.2f}mm | "
                                f"Total: {total_distance_mm:.2f}mm | Seam: {seam_length_mm:.2f}mm")
