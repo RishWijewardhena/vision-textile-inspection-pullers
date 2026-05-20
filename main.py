@@ -18,6 +18,7 @@ from database import DatabaseHandler
 from measurement import StitchMeasurementApp
 from file_cleaner import FileCleanerThread
 from mqtt_heartbeat import MqttHeartbeat
+from backup_data import BackupDataBuffer
 
 def tf():
     ''' return the current timestamp in format [HH:MM:SS] '''
@@ -80,6 +81,10 @@ def main():
         print(tf(), "⚠️ Database connection failed at startup - will retry on next measurement")
     
     # Note: db object is kept even if connection fails, so reconnection can be attempted during measurement inserts
+    
+    # Initialize backup data buffer (for failed measurements)
+    backup_buffer = BackupDataBuffer()
+    
     # reset the total distance in the database to 0 at startup
     if db_connected:
         last_date=db.get_last_record_date()
@@ -88,6 +93,7 @@ def main():
         if last_date is None:
             db.insert_measurement(total_distance=0.0, stitch_length=0.0, seam_allowance=0.0)
             print(tf(), "📊 No previous records - total distance initialized to 0")
+
 
         elif last_date!=today:
             db.insert_measurement(
@@ -224,8 +230,15 @@ def main():
         )
         if db_success:
             print(tf(), "✅ Reset DB insert succeeded (all zeros)")
+            # Try to flush backup buffer after successful reset
+            if not backup_buffer.is_empty():
+                if backup_buffer.flush_to_db(db):
+                    print(tf(), f"✅ Also flushed {len(backup_buffer.get_all())} pending measurements")
         else:
             print(tf(), "⚠️ Reset DB insert failed (will retry on next measurement)")
+            # Add reset record to backup if DB fails
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+            backup_buffer.add(timestamp, 0.0, 0.0, 0.0)
 
         if serial_reader:
             serial_success = serial_reader.send_command("R")
@@ -402,14 +415,31 @@ def main():
                     moved_distance_mm = stitch_delta * stitch_width_mm
                     total_distance_mm += moved_distance_mm
 
+                    # Check if DB reconnected since last failure
+                    if not db.connection or not db.connection.is_connected():
+                        if db.connect():
+                            print(tf(), "🔄 Database reconnected - flushing backup buffer")
+                            if not backup_buffer.is_empty():
+                                if backup_buffer.flush_to_db(db):
+                                    print(tf(), f"✅ Flushed {len(backup_buffer.get_all())} buffered measurements")
+                    
                     # Attempt DB insert; will retry connection if needed
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
                     success = db.insert_measurement(
                         total_distance=round(total_distance_mm, 1),
                         stitch_length=round(stitch_width_mm, 1),
                         seam_allowance=round(seam_length_mm, 1)
                     )
+                    
                     if not success:
-                        print(tf(), "⚠️ Database insert failed - will retry on next valid measurement")
+                        # Add to backup buffer instead of dropping data
+                        backup_buffer.add(timestamp, round(total_distance_mm, 1), 
+                                        round(stitch_width_mm, 1), round(seam_length_mm, 1))
+                        print(tf(), f"⚠️ Database insert failed - backed up to buffer ({backup_buffer.size()}/50)")
+                    else:
+                        # On successful insert, try to flush any pending backups
+                        if not backup_buffer.is_empty():
+                            print(tf(), f"📊 DB insert successful. Buffer has {backup_buffer.size()} pending items")
 
                     info_text = (f"Count: {current_stitch_count} | Count_delta: {stitch_delta} | Moved: {moved_distance_mm:.2f}mm | "
                                f"Total: {total_distance_mm:.2f}mm | Seam: {seam_length_mm:.2f}mm")
@@ -460,6 +490,13 @@ def main():
         if serial_reader:
             serial_reader.stop()
         if db:
+            # Try to flush any remaining backup data before closing
+            if not backup_buffer.is_empty():
+                print(tf(), f"📊 Attempting to flush {backup_buffer.size()} remaining measurements before shutdown...")
+                if backup_buffer.flush_to_db(db):
+                    print(tf(), "✅ Successfully flushed remaining measurements")
+                else:
+                    print(tf(), f"⚠️ {backup_buffer.size()} measurements remain in backup (will flush on restart)")
             db.close()
         if heartbeat:
             heartbeat.stop()
