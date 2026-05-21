@@ -42,7 +42,9 @@ class BackupDataBuffer:
         
         # Persist to CSV when buffer is full (overflow protection)
         if len(self.memory_buffer) >= self.max_memory:
-            self._persist_to_csv()
+            success=self._persist_to_csv()
+            if success:
+                self.memory_buffer.clear()  # Clear buffer after persisting to avoid duplicates on next startup
     
     def _persist_to_csv(self):
         """
