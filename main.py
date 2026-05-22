@@ -181,6 +181,9 @@ def main():
     valid_seam_buffer=deque(maxlen=5)
     valid_width_buffer=deque(maxlen=5)
 
+    # Buffer for marker displacement history (last 20 states)
+    marker_displacement_history = deque(maxlen=MARKER_DISPLACEMENT_BUFFER_SIZE)
+
     RESET_POST_DELAY_SEC = 2.0 
 
     # reset the ESP32 at startup to ensure it’s in a known state (and to clear any accumulated stitch count)
@@ -262,9 +265,7 @@ def main():
 
         if db_success and serial_success and heartbeat:
             heartbeat.publish_reset_success()
-        
-
-    last_marker_check=time.time()  # reset marker check timer to trigger immediately after reset
+    
     
     try:
         while True:
@@ -325,19 +326,23 @@ def main():
                 seam_length_mm = measurements.get('edge_distance_mm', None)
                 stitch_width_mm = measurements.get('stitch_width_mm', None)
 
-                if current_time - last_marker_check >= MARKER_DETECTION_INTERVAL:
-                # Publish marker issue alert if marker is displaced (stitches + marker detected but seam calculation failed)
-                    marker_displaced = measurements.get('marker_displaced', False)
-                    if marker_displaced and heartbeat:
+                marker_displaced = measurements.get('marker_displaced', False)
+                marker_displacement_history.append(marker_displaced)
+                
+                # Check if marker displacement threshold is exceeded
+                if len(marker_displacement_history) > 0:
+                    true_count = sum(marker_displacement_history)
+                    displacement_percent = (true_count / len(marker_displacement_history)) * 100
+                    
+                    if displacement_percent >= MARKER_DISPLACEMENT_THRESHOLD_PERCENT and heartbeat:
+                        if LOG_DEBUG:
+                            print(tf(), f"!!! Marker displacement detected: {displacement_percent:.1f}% of last {len(marker_displacement_history)} samples")
                         try:
                             heartbeat.publish_marker_issue()
                         except Exception as e:
                             if LOG_DEBUG:
-                                print(tf(), f"❌ Failed to publish marker issue: {e}")
+                                print(tf(), f"XX Failed to publish marker issue: {e}")
                     
-                    last_marker_check = current_time # reset marker check timer
-
-
                 #applying the offsets
                 if seam_length_mm is not None:
                     seam_length_mm += SEAM_ALLOWANCE_OFFSET_MM 
