@@ -114,6 +114,10 @@ stitch_lower_limit=2.5 # mm — if stitch width is below this, it's likely a fal
 CONFIRM_CONSECUTIVE = 4 # number of consecutive out-of-range measurements for treat that as a real value 
 CONFIRM_TOLERANCE_MM = 0.55 # mm — how close consecutive out
 
+#------------------------
+# MQTT marker displacement check Alert Settings
+#------------------------
+MARKER_DETECTION_INTERVAL= 10 # seconds between marker detection attempts (to trigger MQTT alert if marker is displaced)
 
 # -------------------------
 # Database Config  ensuring these are set in .env file or handled gracefully
