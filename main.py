@@ -262,7 +262,10 @@ def main():
 
         if db_success and serial_success and heartbeat:
             heartbeat.publish_reset_success()
+        
 
+    last_marker_check=time.time()  # reset marker check timer to trigger immediately after reset
+    
     try:
         while True:
             if reset_requested.is_set():
@@ -322,14 +325,18 @@ def main():
                 seam_length_mm = measurements.get('edge_distance_mm', None)
                 stitch_width_mm = measurements.get('stitch_width_mm', None)
 
+                if current_time - last_marker_check >= MARKER_DETECTION_INTERVAL:
                 # Publish marker issue alert if marker is displaced (stitches + marker detected but seam calculation failed)
-                marker_displaced = measurements.get('marker_displaced', False)
-                if marker_displaced and heartbeat:
-                    try:
-                        heartbeat.publish_marker_issue()
-                    except Exception as e:
-                        if LOG_DEBUG:
-                            print(tf(), f"❌ Failed to publish marker issue: {e}")
+                    marker_displaced = measurements.get('marker_displaced', False)
+                    if marker_displaced and heartbeat:
+                        try:
+                            heartbeat.publish_marker_issue()
+                        except Exception as e:
+                            if LOG_DEBUG:
+                                print(tf(), f"❌ Failed to publish marker issue: {e}")
+                    
+                    last_marker_check = current_time # reset marker check timer
+
 
                 #applying the offsets
                 if seam_length_mm is not None:
