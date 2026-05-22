@@ -117,7 +117,8 @@ CONFIRM_TOLERANCE_MM = 0.55 # mm — how close consecutive out
 #------------------------
 # MQTT marker displacement check Alert Settings
 #------------------------
-MARKER_DETECTION_INTERVAL= 10 # seconds between marker detection attempts (to trigger MQTT alert if marker is displaced)
+MARKER_DISPLACEMENT_BUFFER_SIZE = 10  # number of marker displacement states to buffer
+MARKER_DISPLACEMENT_THRESHOLD_PERCENT = 60  # percentage of buffer that must be True to trigger alert
 
 # -------------------------
 # Database Config  ensuring these are set in .env file or handled gracefully
