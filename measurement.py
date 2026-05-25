@@ -390,7 +390,7 @@ class StitchMeasurementApp:
         n_found = len(active_indices)
 
         # Detect marker displacement: stitches + marker detected but no valid seam distances calculated
-        marker_displaced = len(stitch_masks) > 0 and marker_combined is not None and len(per_dists) == 0
+        marker_displaced = len(stitch_masks) > 1 and marker_combined is not None and len(per_dists) == 0
 
         # Per-frame robust averaging with outlier rejection
         dist_mean, dist_inliers, dist_total = filtered_mean(
