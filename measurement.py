@@ -304,7 +304,8 @@ class StitchMeasurementApp:
             centroids_y.append(cy)
 
         active_indices = list(range(len(stitch_masks)))
-        if len(centroids_y) >= 2:
+
+        if len(centroids_y) >= 2 and not SKIP_CLUSTER:
             vals   = np.array(centroids_y)
             spread = vals.max() - vals.min()
             if spread > MIN_CLUSTER_SPREAD_PX:
