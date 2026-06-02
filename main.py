@@ -19,6 +19,7 @@ from measurement import StitchMeasurementApp
 from file_cleaner import FileCleanerThread
 from mqtt_heartbeat import MqttHeartbeat
 from backup_data import BackupDataBuffer
+from needle_angle_measure import NeedleAngleWorker
 
 def tf():
     ''' return the current timestamp in format [HH:MM:SS] '''
@@ -147,6 +148,24 @@ def main():
     except Exception as e:
         print(tf(), f"⚠️ MQTT heartbeat not started: {e} (continuing without heartbeat)")
 
+    angle_worker = None
+    try:
+        angle_worker = NeedleAngleWorker(
+            model_path=NEEDLE_ANGLE_MODEL_PATH,
+            interval_sec=NEEDLE_ANGLE_CHECK_INTERVAL,
+            not_rotated_angle_min=NEEDLE_NOT_ROTATED_ANGLE_MIN,
+            not_rotated_angle_max=NEEDLE_NOT_ROTATED_ANGLE_MAX,
+        )
+        angle_worker.start()
+        print(
+            tf()
+            + f" ✅ Needle angle worker started: {NEEDLE_ANGLE_MODEL_PATH} "
+            + f"(every {NEEDLE_ANGLE_CHECK_INTERVAL}s, normal range "
+            + f"{NEEDLE_NOT_ROTATED_ANGLE_MIN}-{NEEDLE_NOT_ROTATED_ANGLE_MAX}°)"
+        )
+    except Exception as e:
+        print(tf() + f" ⚠️ Needle angle worker not started: {e}")
+
     print(tf(), "\n" + "="*60)
     print(tf(), "🎯 SYSTEM READY - Starting measurements")
     print(tf(), "="*60)
@@ -167,6 +186,12 @@ def main():
     session_dir = os.path.join(SAVE_DIR, session_start)
     os.makedirs(session_dir, exist_ok=True)
     print(tf(), f"📁 Session folder: {os.path.abspath(session_dir)}")
+    needle_annotations_dir = os.path.join(session_dir, "needle_angles")
+    os.makedirs(needle_annotations_dir, exist_ok=True)
+    print(tf() + f" 📁 Needle annotation folder: {os.path.abspath(needle_annotations_dir)}")
+    if angle_worker:
+        angle_worker.set_annotation_dir(needle_annotations_dir)
+
 
     CAMERA_RECONNECT_ATTEMPTS = 0
     MAX_RECONNECT_ATTEMPTS = 10
@@ -317,6 +342,23 @@ def main():
                 annotated, measurements = measurement_app.process_frame(frame)
 
                 current_stitch_count = serial_reader.get_stitch_count() if serial_reader else 0
+
+                if angle_worker and angle_worker.maybe_submit(frame, current_time):
+                    print(tf() + " 🧭 Needle angle inference queued")
+                
+                if angle_worker and heartbeat:
+                    angle_result = angle_worker.latest_result()
+                    if angle_result.get("rotated"):
+                        try:
+                            heartbeat.client.publish(
+                                MQTT_CAMERA_ISSUE_TOPIC,
+                                payload="rotated",
+                                qos=0,
+                                retain=False,
+                            )
+                            print(tf() + f" MQTT camera issue sent: {MQTT_CAMERA_ISSUE_TOPIC} -> rotated")
+                        except Exception as exc:
+                            print(tf() + f" ⚠️ MQTT camera rotated publish failed: {exc}")
 
                 # Calculate movement based on stitch count change
                 stitch_delta += current_stitch_count - last_stitch_count
