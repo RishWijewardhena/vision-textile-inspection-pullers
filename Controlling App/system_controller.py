@@ -375,7 +375,7 @@ class App(tk.Tk):
 
         tk.Label(
             settings_inner,
-            text="OFFSET SETTINGS",
+            text="ADJUSTEMNTS SETTINGS",
             fg=TEXT_MUTED,
             bg=BG_STRIP,
             font=("Courier New", 8, "bold")
@@ -423,11 +423,11 @@ class App(tk.Tk):
 
         self._save_btn = RoundedButton(
             settings_inner,
-            text="SAVE OFFSETS",
+            text="SAVE ADJUSTEMNTS",
             color=ACCENT_BLUE,
             hover_color="#5A93FF",
             command=self._save_offsets,
-            btn_width=260,
+            btn_width=350,
             btn_height=55
         )
 
