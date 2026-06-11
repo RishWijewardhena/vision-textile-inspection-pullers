@@ -311,6 +311,7 @@ def main():
             if not ret:
                 CAMERA_RECONNECT_ATTEMPTS += 1
                 print(tf(), f"! No frame from camera (attempt {CAMERA_RECONNECT_ATTEMPTS}/{MAX_RECONNECT_ATTEMPTS})")
+                time.sleep(1.5) #short delay before retrying
                 
                 if heartbeat:
                     try:
@@ -322,6 +323,7 @@ def main():
                 if CAMERA_RECONNECT_ATTEMPTS >= MAX_RECONNECT_ATTEMPTS:
 
                     print(tf(), " Camera disconnected. Attempting to reconnect...")
+                    measurement_app.cap.release()
                     time.sleep(1)
 
                     reload_camera()  # reload the camera for a fresh start
