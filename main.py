@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import threading
+import glob
 import cv2
 from datetime import datetime
 from collections import deque
@@ -21,10 +22,22 @@ from log_cleaner import clean_old_logs
 from mqtt_heartbeat import MqttHeartbeat
 from backup_data import BackupDataBuffer
 from needle_angle_measure import NeedleAngleWorker
+from hardware_utils import find_camera
 
 def tf():
     ''' return the current timestamp in format [HH:MM:SS] '''
     return datetime.now().strftime("[%H:%M:%S]")
+
+
+def wait_for_camera_nodes(timeout_sec=4.0, poll_interval_sec=0.2):
+    """Wait for /dev/video* nodes to appear after driver reload."""
+    deadline = time.time() + timeout_sec
+    while time.time() < deadline:
+        nodes = sorted(glob.glob("/dev/video*"))
+        if nodes:
+            return True, nodes
+        time.sleep(poll_interval_sec)
+    return False, sorted(glob.glob("/dev/video*"))
 
 
 def reload_camera():
@@ -33,7 +46,11 @@ def reload_camera():
     try:
         subprocess.run(["sudo", "modprobe", "-r", "uvcvideo"], check=True)
         subprocess.run(["sudo", "modprobe", "uvcvideo"], check=True)
-        print(tf() + " ✅ Webcam driver reloaded")
+        ready, nodes = wait_for_camera_nodes(timeout_sec=4.0, poll_interval_sec=0.2)
+        if ready:
+            print(tf() + f" ✅ Webcam driver reloaded; camera nodes detected: {nodes}")
+        else:
+            print(tf() + " ⚠️ Webcam driver reloaded, but no /dev/video* nodes detected yet")
     except subprocess.CalledProcessError as e:
         print(tf() + f" ⚠️ Failed to reload webcam driver: {e}")
 
@@ -331,7 +348,14 @@ def main():
                     time.sleep(1)
 
                     reload_camera()  # reload the camera for a fresh start
-                    time.sleep(5)  # wait a moment for the system to stabilize after reload
+                    time.sleep(0.5)
+                    old_camera_index = measurement_app.camera_index
+                    detected_camera_index = find_camera()
+                    measurement_app.camera_index = detected_camera_index
+                    print(
+                        tf(),
+                        f" 🔎 Camera re-detected before reopen: {old_camera_index} -> {detected_camera_index}",
+                    )
                     if measurement_app.reopen_camera(CALIB_W, CALIB_H):
                         print(tf(), "✅ Camera reconnected")
                     else:
