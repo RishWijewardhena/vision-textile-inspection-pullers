@@ -17,6 +17,7 @@ from serial_reader import SerialReader
 from database import DatabaseHandler
 from measurement import StitchMeasurementApp
 from file_cleaner import FileCleanerThread
+from log_cleaner import clean_old_logs
 from mqtt_heartbeat import MqttHeartbeat
 from backup_data import BackupDataBuffer
 from needle_angle_measure import NeedleAngleWorker
@@ -120,6 +121,9 @@ def main():
     except Exception as e:
         print(tf(), f"⚠️ File cleaner thread failed to start: {e} (continuing without file cleanup)")
         file_cleaner = None
+
+    # Run one-time log cleanup at startup to free old disk space.
+    clean_old_logs()
 
     # Initialize MQTT heartbeat
     heartbeat = None
