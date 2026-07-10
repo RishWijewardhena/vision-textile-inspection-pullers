@@ -348,7 +348,7 @@ def main():
                     time.sleep(1)
 
                     reload_camera()  # reload the camera for a fresh start
-                    time.sleep(0.5)
+                    time.sleep(5)
                     old_camera_index = measurement_app.camera_index
                     detected_camera_index = find_camera()
                     measurement_app.camera_index = detected_camera_index
