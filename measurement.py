@@ -1,6 +1,8 @@
 # measurement.py
 import os
 import json
+import glob
+import re
 import cv2
 import numpy as np
 from collections import deque
@@ -9,7 +11,7 @@ import time
 from datetime import datetime
 
 from config import *
-from hardware_utils import open_v4l2_camera
+from hardware_utils import open_v4l2_camera, camera_to_v4l2_index
 
 # -------------------------
 # Helper Functions
@@ -17,6 +19,11 @@ from hardware_utils import open_v4l2_camera
 def load_json(path):
     with open(path, 'r') as f:
         return json.load(f)
+
+
+def _camera_sort_key(path):
+    match = re.search(r"(\d+)$", str(path))
+    return int(match.group(1)) if match else 999
 
 def force_camera_resolution(cap, w, h):
     if cap is None or not cap.isOpened():
@@ -169,18 +176,46 @@ class StitchMeasurementApp:
         if self.cap is not None:
             self.cap.release()
 
-        self.cap = open_v4l2_camera(self.camera_index)
-        self.aw, self.ah = force_camera_resolution(self.cap, calib_w, calib_h)
+        def _try_candidate(camera_candidate):
+            cap = open_v4l2_camera(camera_candidate)
+            aw, ah = force_camera_resolution(cap, calib_w, calib_h)
 
-        if self.aw == 0 or self.ah == 0:
-            return False
+            if aw == 0 or ah == 0:
+                cap.release()
+                return None
 
-        for _ in range(warmup_attempts):
-            ret, frame = self.cap.read()
-            if ret and frame is not None and frame.size > 0:
+            for _ in range(warmup_attempts):
+                ret, frame = cap.read()
+                if ret and frame is not None and frame.size > 0:
+                    return cap, aw, ah
+                time.sleep(0.1)
+
+            cap.release()
+            return None
+
+        candidates = [self.camera_index]
+        for cam in sorted(glob.glob("/dev/video*"), key=_camera_sort_key):
+            candidate = camera_to_v4l2_index(cam)
+            if candidate not in candidates:
+                candidates.append(candidate)
+
+        if LOG_DEBUG:
+            print(f"Camera reopen candidates: {candidates}")
+
+        for candidate in candidates:
+            if LOG_DEBUG:
+                print(f"Trying camera candidate: {candidate}")
+            reopened = _try_candidate(candidate)
+            if reopened is not None:
+                self.cap, self.aw, self.ah = reopened
+                self.camera_index = candidate
+                if LOG_DEBUG:
+                    print(f"Camera reopened successfully with candidate: {candidate}")
                 return True
-            time.sleep(0.1)
 
+        # Keep a capture handle object so caller can continue retries without attribute errors.
+        self.cap = open_v4l2_camera(self.camera_index)
+        self.aw, self.ah = 0, 0
         return False
 
     def process_frame(self, frame):
