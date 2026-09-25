@@ -208,7 +208,7 @@ def main():
             camera_issue_topic=MQTT_CAMERA_ISSUE_TOPIC,
             esp32_issue_topic=MQTT_ESP32_ISSUE_TOPIC,
             marker_issue_topic=MQTT_MARKER_ISSUE_TOPIC,
-            camera_calibration_issue_topic=MQTT_CAMERA_CALIBRARION_ISSUE_TOPIC
+            camera_calibration_issue_topic=MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC
         )
         heartbeat.start()
         print(tf(), f"✅ MQTT heartbeat started: {MQTT_HEARTBEAT_TOPIC} (every {MQTT_HEARTBEAT_INTERVAL}s)")
@@ -445,16 +445,17 @@ def main():
                             print(tf() + f" ⚠️ MQTT camera rotated publish failed: {exc}")
 
                         current_extrinsics_hash = compute_file_hash(EXTRINSICS_FILE)
+                        if not calibration_invalid_pending:
+                            try:
+                                heartbeat.publish_camera_calibration_issue("invalid")
+                                print(tf() + f" MQTT camera calibration issue sent: {MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC} -> invalid")
+                            except Exception as exc:
+                                print(tf() + f" ⚠️ MQTT camera calibration issue publish failed: {exc}")
+
                         last_rotated_extrinsics_snapshot = current_extrinsics_hash
                         calibration_invalid_pending = True
                         if not write_calibration_hash_state(calibration_state_path, last_rotated_extrinsics_snapshot):
                             print(tf(), "⚠️ Could not persist bad calibration hash to disk")
-
-                        try:
-                            heartbeat.publish_camera_calibration_issue("invalid")
-                            print(tf() + f" MQTT camera calibration issue sent: {MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC} -> invalid")
-                        except Exception as exc:
-                            print(tf() + f" ⚠️ MQTT camera calibration issue publish failed: {exc}")
 
                     elif calibration_invalid_pending:
                         current_extrinsics_hash = compute_file_hash(EXTRINSICS_FILE)
@@ -471,13 +472,8 @@ def main():
                             except Exception as exc:
                                 print(tf() + f" ⚠️ MQTT camera calibration valid publish failed: {exc}")
                         else:
-                            try:
-                                heartbeat.publish_camera_calibration_issue("invalid")
-                                print(tf() + f" MQTT camera calibration issue sent: {MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC} -> invalid")
-                                if not write_calibration_hash_state(calibration_state_path, last_rotated_extrinsics_snapshot):
-                                    print(tf(), "⚠️ Could not persist unchanged bad calibration hash to disk")
-                            except Exception as exc:
-                                print(tf() + f" ⚠️ MQTT camera calibration issue publish failed: {exc}")
+                            if LOG_DEBUG:
+                                print(tf(), " Calibration still invalid; MQTT publish suppressed until the state changes")
                             calibration_invalid_pending = True
 
                         if LOG_DEBUG:
