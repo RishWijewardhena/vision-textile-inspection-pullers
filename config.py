@@ -144,8 +144,6 @@ INFERENCE_INTERVAL =2  # seconds between inferences
 SAVE_DIR = "saved_annotations"
 LOG_DEBUG = True          # set True to print debug info
 
-
-
 # -------------------------
 # file cleaner 
 # ------------------------
@@ -178,6 +176,7 @@ MQTT_RESET_TOPIC = f"machine/{DEVICE_ID}/commands/reset"
 MQTT_CAMERA_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/camera_issue"
 MQTT_ESP32_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/esp32_issue"
 MQTT_MARKER_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/marker_issue"
+MQTT_CAMERA_CALIBRARION_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/camera_calibration_ex" #check if the extrinsics calibration is valid
 
 MQTT_HEARTBEAT_INTERVAL = 2.0  # seconds
 MQTT_TLS_INSECURE = _env_bool("MQTT_TLS_INSECURE", True)
