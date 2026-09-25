@@ -18,7 +18,8 @@ class MqttHeartbeat(threading.Thread):
         on_reset=None,
         camera_issue_topic=None,
         esp32_issue_topic=None,
-        marker_issue_topic=None
+        marker_issue_topic=None,
+        camera_calibration_issue_topic=None
     ):
         super().__init__(daemon=True)
         self.broker = broker
@@ -33,6 +34,7 @@ class MqttHeartbeat(threading.Thread):
         self.camera_issue_topic = camera_issue_topic
         self.esp32_issue_topic = esp32_issue_topic
         self.marker_issue_topic = marker_issue_topic
+        self.camera_calibration_issue_topic = camera_calibration_issue_topic
 
         self._stop_event = threading.Event()
 
@@ -107,6 +109,21 @@ class MqttHeartbeat(threading.Thread):
             return
         self._publish_to_topic(self.marker_issue_topic, "issue")
         print(f" MQTT published marker issue to topic: {self.marker_issue_topic}")
+
+    def publish_camera_calibration_issue(self,state):
+        """Publish camera calibration issue status to camera_calibration_issue topic."""
+        if not self.camera_calibration_issue_topic:
+            return
+        
+        if state == "invalid":
+            self._publish_to_topic(self.camera_calibration_issue_topic, "invalid")
+            print(f" MQTT published camera calibration issue to topic: {self.camera_calibration_issue_topic}")
+        elif state == "valid":
+            self._publish_to_topic(self.camera_calibration_issue_topic, "valid")
+            print(f" MQTT published camera calibration valid to topic: {self.camera_calibration_issue_topic}")
+        else:
+            print(f" ❌ Invalid state for camera calibration issue: {state}")
+
 
     def run(self):
         self.client.connect(self.broker, self.port, keepalive=30)
