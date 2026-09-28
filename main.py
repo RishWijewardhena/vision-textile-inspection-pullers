@@ -243,6 +243,10 @@ def main():
             debug=LOG_DEBUG,
         )
     last_angle_checked_at = None
+    # Assume a retained "rotated" may be left on the broker from a previous run, so the
+    # first straight angle check clears it. None = no pending publish.
+    camera_rotated_retained = True
+    camera_rotated_target = None
 
     # reset the ESP32 at startup to ensure it’s in a known state (and to clear any accumulated stitch count)
     if serial_reader:
@@ -397,18 +401,25 @@ def main():
                         last_angle_checked_at = checked_at
 
                         if angle_result.get("rotated"):
-                            try:
-                                heartbeat.client.publish(
-                                    MQTT_CAMERA_ISSUE_TOPIC,
-                                    payload="rotated",
-                                    qos=0,
-                                    retain=False,
-                                )
-                                print(tf() + f" MQTT camera issue sent: {MQTT_CAMERA_ISSUE_TOPIC} -> rotated")
-                            except Exception as exc:
-                                print(tf() + f" ⚠️ MQTT camera rotated publish failed: {exc}")
-
+                            camera_rotated_target = True
                             calibration_monitor.on_rotated()
+                        elif (
+                            camera_rotated_retained
+                            and angle_result.get("detections")
+                            and not angle_result.get("error")
+                        ):
+                            # only clear on a real detection showing the needle straight, not on a missed detection
+                            camera_rotated_target = False
+
+                    # retained so the dashboard sees the rotated state even if it connects later; retried until published
+                    if camera_rotated_target is not None:
+                        if camera_rotated_target:
+                            published = heartbeat.publish_camera_rotated()
+                        else:
+                            published = heartbeat.clear_camera_rotated()
+                        if published:
+                            camera_rotated_retained = camera_rotated_target
+                            camera_rotated_target = None
 
                 if calibration_monitor:
                     calibration_monitor.poll()
