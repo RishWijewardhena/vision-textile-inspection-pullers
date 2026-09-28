@@ -243,10 +243,7 @@ def main():
             debug=LOG_DEBUG,
         )
     last_angle_checked_at = None
-    # Assume a retained "rotated" may be left on the broker from a previous run, so the
-    # first straight angle check clears it. None = no pending publish.
-    camera_rotated_retained = True
-    camera_rotated_target = None
+    camera_rotated = False
 
     # reset the ESP32 at startup to ensure it’s in a known state (and to clear any accumulated stitch count)
     if serial_reader:
@@ -401,25 +398,15 @@ def main():
                         last_angle_checked_at = checked_at
 
                         if angle_result.get("rotated"):
-                            camera_rotated_target = True
+                            camera_rotated = True
                             calibration_monitor.on_rotated()
-                        elif (
-                            camera_rotated_retained
-                            and angle_result.get("detections")
-                            and not angle_result.get("error")
-                        ):
+                        elif angle_result.get("detections") and not angle_result.get("error"):
                             # only clear on a real detection showing the needle straight, not on a missed detection
-                            camera_rotated_target = False
+                            camera_rotated = False
 
-                    # retained so the dashboard sees the rotated state even if it connects later; retried until published
-                    if camera_rotated_target is not None:
-                        if camera_rotated_target:
-                            published = heartbeat.publish_camera_rotated()
-                        else:
-                            published = heartbeat.clear_camera_rotated()
-                        if published:
-                            camera_rotated_retained = camera_rotated_target
-                            camera_rotated_target = None
+                    # not retained, so keep sending while rotated for the dashboard to show the issue
+                    if camera_rotated:
+                        heartbeat.publish_camera_rotated()
 
                 if calibration_monitor:
                     calibration_monitor.poll()
