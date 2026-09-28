@@ -76,12 +76,17 @@ class MqttHeartbeat(threading.Thread):
             except Exception as exc:
                 print(f"❌ MQTT reset callback failed: {exc}")
 
-    def _publish_to_topic(self, topic, payload):
-        """Internal helper to publish to a topic with error handling."""
+    def _publish_to_topic(self, topic, payload, qos=0, retain=False):
+        """Internal helper to publish to a topic with error handling. Returns True on success."""
         try:
-            self.client.publish(topic, payload=payload, qos=0, retain=False)
+            info = self.client.publish(topic, payload=payload, qos=qos, retain=retain)
+            if info.rc != mqtt.MQTT_ERR_SUCCESS:
+                print(f"❌ MQTT publish failed: {mqtt.error_string(info.rc)}")
+                return False
+            return True
         except Exception as exc:
             print(f"❌ MQTT publish failed: {exc}")
+            return False
 
     def publish_reset_success(self):
         if not self.reset_topic:
@@ -95,6 +100,15 @@ class MqttHeartbeat(threading.Thread):
             return
         self._publish_to_topic(self.camera_issue_topic, "issue")
         print(f" MQTT published camera issue to topic: {self.camera_issue_topic}")
+
+    def publish_camera_rotated(self):
+        """Publish "rotated" to camera_issue topic (not retained; call repeatedly while rotated). Returns True if published."""
+        if not self.camera_issue_topic:
+            return False
+        ok = self._publish_to_topic(self.camera_issue_topic, "rotated")
+        if ok:
+            print(f" MQTT published camera rotated to topic: {self.camera_issue_topic}")
+        return ok
 
     def publish_esp32_issue(self):
         """Publish ESP32 issue status to esp32_issue topic."""
@@ -110,20 +124,23 @@ class MqttHeartbeat(threading.Thread):
         self._publish_to_topic(self.marker_issue_topic, "issue")
         print(f" MQTT published marker issue to topic: {self.marker_issue_topic}")
 
-    def publish_camera_calibration_issue(self,state):
-        """Publish camera calibration issue status to camera_calibration_issue topic."""
-        if not self.camera_calibration_issue_topic:
-            return
-        
-        if state == "invalid":
-            self._publish_to_topic(self.camera_calibration_issue_topic, "invalid")
-            print(f" MQTT published camera calibration issue to topic: {self.camera_calibration_issue_topic}")
-        elif state == "valid":
-            self._publish_to_topic(self.camera_calibration_issue_topic, "valid")
-            print(f" MQTT published camera calibration valid to topic: {self.camera_calibration_issue_topic}")
-        else:
-            print(f" ❌ Invalid state for camera calibration issue: {state}")
+    def publish_camera_calibration_issue(self, state):
+        """Publish camera calibration status ("invalid" or "valid") to camera_calibration_issue topic.
 
+        Retained with QoS 1 so the dashboard always sees the current state, even if it
+        was offline when the state changed. Returns True if the message was published.
+        """
+        if not self.camera_calibration_issue_topic:
+            return False
+
+        if state not in ("invalid", "valid"):
+            print(f" ❌ Invalid state for camera calibration issue: {state}")
+            return False
+
+        ok = self._publish_to_topic(self.camera_calibration_issue_topic, state, qos=1, retain=True)
+        if ok:
+            print(f" MQTT published camera calibration {state} to topic: {self.camera_calibration_issue_topic}")
+        return ok
 
     def run(self):
         self.client.connect(self.broker, self.port, keepalive=30)
