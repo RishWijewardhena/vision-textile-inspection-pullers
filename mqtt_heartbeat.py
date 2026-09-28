@@ -101,6 +101,24 @@ class MqttHeartbeat(threading.Thread):
         self._publish_to_topic(self.camera_issue_topic, "issue")
         print(f" MQTT published camera issue to topic: {self.camera_issue_topic}")
 
+    def publish_camera_rotated(self):
+        """Publish a retained "rotated" state to camera_issue topic. Returns True if published."""
+        if not self.camera_issue_topic:
+            return False
+        ok = self._publish_to_topic(self.camera_issue_topic, "rotated", qos=1, retain=True)
+        if ok:
+            print(f" MQTT published camera rotated (retained) to topic: {self.camera_issue_topic}")
+        return ok
+
+    def clear_camera_rotated(self):
+        """Clear the retained "rotated" state on camera_issue topic (empty retained payload). Returns True if published."""
+        if not self.camera_issue_topic:
+            return False
+        ok = self._publish_to_topic(self.camera_issue_topic, "", qos=1, retain=True)
+        if ok:
+            print(f" MQTT cleared retained camera rotated state on topic: {self.camera_issue_topic}")
+        return ok
+
     def publish_esp32_issue(self):
         """Publish ESP32 issue status to esp32_issue topic."""
         if not self.esp32_issue_topic:
