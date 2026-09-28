@@ -232,7 +232,8 @@ class StitchMeasurementApp:
             #                              iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS)
             results = self.model.predict(frame,
                                           verbose=False, conf=CONF_THRESH,
-                                          iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS)
+                                          iou=IOU_THRESH, imgsz=960, max_det=MAX_DETECTIONS,
+                                          retina_masks=True)  # masks at frame size, letterbox padding removed
             
             r = results[0]
         except Exception as e:
