@@ -19,7 +19,9 @@ class MqttHeartbeat(threading.Thread):
         camera_issue_topic=None,
         esp32_issue_topic=None,
         marker_issue_topic=None,
-        camera_calibration_issue_topic=None
+        camera_calibration_issue_topic=None,
+        clear_calibration_topic=None,
+        on_clear_calibration=None,
     ):
         super().__init__(daemon=True)
         self.broker = broker
@@ -35,6 +37,8 @@ class MqttHeartbeat(threading.Thread):
         self.esp32_issue_topic = esp32_issue_topic
         self.marker_issue_topic = marker_issue_topic
         self.camera_calibration_issue_topic = camera_calibration_issue_topic
+        self.clear_calibration_topic = clear_calibration_topic
+        self.on_clear_calibration = on_clear_calibration
 
         self._stop_event = threading.Event()
 
@@ -60,8 +64,18 @@ class MqttHeartbeat(threading.Thread):
                 print(f"✅ MQTT subscribed to reset topic: {self.reset_topic}")
             except Exception as exc:
                 print(f"❌ MQTT reset subscribe failed: {exc}")
+        if rc == 0 and self.clear_calibration_topic:
+            try:
+                client.subscribe(self.clear_calibration_topic, qos=0)
+                print(f"✅ MQTT subscribed to clear calibration topic: {self.clear_calibration_topic}")
+            except Exception as exc:
+                print(f"❌ MQTT clear calibration subscribe failed: {exc}")
 
     def _on_message(self, client, userdata, msg):
+        if self.clear_calibration_topic and msg.topic == self.clear_calibration_topic:
+            self._handle_clear_calibration(msg)
+            return
+
         if not self.reset_topic or msg.topic != self.reset_topic:
             return
 
@@ -75,6 +89,18 @@ class MqttHeartbeat(threading.Thread):
                 self.on_reset()
             except Exception as exc:
                 print(f"❌ MQTT reset callback failed: {exc}")
+
+    def _handle_clear_calibration(self, msg):
+        payload = msg.payload.decode("utf-8", errors="ignore").strip().lower()
+        if payload != "clear":
+            return
+
+        print(f"📨 MQTT clear calibration command received on topic: {self.clear_calibration_topic}")
+        if self.on_clear_calibration:
+            try:
+                self.on_clear_calibration()
+            except Exception as exc:
+                print(f"❌ MQTT clear calibration callback failed: {exc}")
 
     def _publish_to_topic(self, topic, payload, qos=0, retain=False):
         """Internal helper to publish to a topic with error handling. Returns True on success."""
