@@ -23,6 +23,7 @@ from mqtt_heartbeat import MqttHeartbeat
 from backup_data import BackupDataBuffer
 from needle_angle_measure import NeedleAngleWorker
 from calibration_monitor import CalibrationMonitor
+from scripts.clear_calibration_bad_hash import clear_calibration_bad_hash
 from hardware_utils import find_camera
 
 def tf():
@@ -150,6 +151,9 @@ def main():
     def queue_reset_request():
         reset_requested.set()
 
+    # MQTT callbacks run on the MQTT thread; the clear itself is done in the main loop
+    clear_calibration_requested = threading.Event()
+
     try:
         heartbeat = MqttHeartbeat(
             broker=MQTT_SERVER,
@@ -164,7 +168,9 @@ def main():
             camera_issue_topic=MQTT_CAMERA_ISSUE_TOPIC,
             esp32_issue_topic=MQTT_ESP32_ISSUE_TOPIC,
             marker_issue_topic=MQTT_MARKER_ISSUE_TOPIC,
-            camera_calibration_issue_topic=MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC
+            camera_calibration_issue_topic=MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC,
+            clear_calibration_topic=MQTT_CLEAR_CALIBRATION_TOPIC,
+            on_clear_calibration=clear_calibration_requested.set,
         )
         heartbeat.start()
         print(tf(), f"✅ MQTT heartbeat started: {MQTT_HEARTBEAT_TOPIC} (every {MQTT_HEARTBEAT_INTERVAL}s)")
@@ -334,6 +340,11 @@ def main():
             if reset_requested.is_set():
                 reset_requested.clear()
                 perform_reset()
+
+            if clear_calibration_requested.is_set():
+                clear_calibration_requested.clear()
+                if calibration_monitor and clear_calibration_bad_hash(calibration_monitor.state_path):
+                    calibration_monitor.clear()
             
             if not serial_reader or not serial_reader._is_connected():
                 time.sleep(1)  # Avoid busy loop if serial reader is unavailable
