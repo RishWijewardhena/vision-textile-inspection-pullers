@@ -242,7 +242,10 @@ def main():
             publish=heartbeat.publish_camera_calibration_issue,
             debug=LOG_DEBUG,
         )
+    # Needle rotation is only reported after NEEDLE_ROTATION_CONFIRM_COUNT consecutive rotated
+    # checks, so a single false detection does not raise camera/calibration alerts.
     last_angle_checked_at = None
+    rotation_streak = 0
     camera_rotated = False
 
     # reset the ESP32 at startup to ensure it’s in a known state (and to clear any accumulated stitch count)
@@ -398,11 +401,25 @@ def main():
                         last_angle_checked_at = checked_at
 
                         if angle_result.get("rotated"):
-                            camera_rotated = True
-                            calibration_monitor.on_rotated()
+                            rotation_streak += 1
+                            if rotation_streak < NEEDLE_ROTATION_CONFIRM_COUNT:
+                                angle_worker.request_recheck(NEEDLE_RECHECK_DELAY, current_time)
+                                print(tf() + f" 🧭 Needle rotation suspected ({rotation_streak}/{NEEDLE_ROTATION_CONFIRM_COUNT}), re-checking in {NEEDLE_RECHECK_DELAY}s")
+                            else:
+                                if not camera_rotated:
+                                    print(tf() + f" 🧭 Needle rotation confirmed ({rotation_streak} consecutive checks)")
+                                camera_rotated = True
+                                calibration_monitor.on_rotated()
                         elif angle_result.get("detections") and not angle_result.get("error"):
-                            # only clear on a real detection showing the needle straight, not on a missed detection
+                            # needle found within range: false alarm or camera fixed
+                            if rotation_streak and not camera_rotated:
+                                print(tf() + " 🧭 Needle rotation not confirmed (false detection)")
+                            rotation_streak = 0
                             camera_rotated = False
+                        elif not camera_rotated and rotation_streak:
+                            # needle not detected while confirming: do not alert without confirmation
+                            print(tf() + " 🧭 Needle not detected during re-check, rotation not confirmed")
+                            rotation_streak = 0
 
                     # not retained, so keep sending while rotated for the dashboard to show the issue
                     if camera_rotated:

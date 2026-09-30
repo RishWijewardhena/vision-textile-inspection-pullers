@@ -186,6 +186,8 @@ MQTT_TLS_INSECURE = _env_bool("MQTT_TLS_INSECURE", True)
 # -------------------------
 NEEDLE_ANGLE_MODEL_PATH = "models/needle_detecting_model.pt"
 NEEDLE_ANGLE_CHECK_INTERVAL = 30 * 60  # seconds between angle inferences
+NEEDLE_ROTATION_CONFIRM_COUNT = 3  # consecutive rotated checks (first + re-checks) needed before a rotation alert
+NEEDLE_RECHECK_DELAY = 60  # seconds between re-checks while confirming a rotation
 NEEDLE_ANGLE_CONF_THRESH = 0.4
 NEEDLE_ANGLE_IOU_THRESH = 0.20
 NEEDLE_NOT_ROTATED_ANGLE_MIN = 80.0
