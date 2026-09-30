@@ -177,6 +177,7 @@ MQTT_CAMERA_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/camera_issue"
 MQTT_ESP32_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/esp32_issue"
 MQTT_MARKER_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/marker_issue"
 MQTT_CAMERA_CALIBRATION_ISSUE_TOPIC = f"machine/{DEVICE_ID}/status/camera_calibration_ex" #check if the extrinsics calibration is valid
+MQTT_CLEAR_CALIBRATION_TOPIC = f"machine/{DEVICE_ID}/commands/clear_calibration"  # send "clear" to delete the calibration bad-hash file and publish "valid"
 
 MQTT_HEARTBEAT_INTERVAL = 2.0  # seconds
 MQTT_TLS_INSECURE = _env_bool("MQTT_TLS_INSECURE", True)
