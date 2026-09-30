@@ -119,6 +119,22 @@ class CalibrationMonitorTest(unittest.TestCase):
         m.poll()
         self.assertEqual(self.pub.sent, ["invalid"])
 
+    def test_clear_publishes_valid_and_stays_valid(self):
+        m = self.make_monitor()
+        m.on_rotated()
+        m.clear()
+        self.advance()
+        m.poll()
+        self.assertFalse(m.invalid)
+        self.assertEqual(self.pub.sent, ["invalid", "valid"])
+
+    def test_clear_then_rotated_again_publishes_invalid(self):
+        m = self.make_monitor()
+        m.on_rotated()
+        m.clear()
+        m.on_rotated()
+        self.assertEqual(self.pub.sent, ["invalid", "valid", "invalid"])
+
     def test_hash_check_is_throttled(self):
         m = self.make_monitor()
         m.on_rotated()

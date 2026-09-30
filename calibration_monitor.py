@@ -135,6 +135,13 @@ class CalibrationMonitor:
         self._unsent_state = "valid"
         self._flush()
 
+    def clear(self):
+        """Forget the bad hash in memory and publish "valid" (e.g. after the state file was deleted remotely)."""
+        self.bad_hash = None
+        self._last_check_at = None
+        self._unsent_state = "valid"
+        self._flush()
+
     def _flush(self):
         if self._unsent_state is None:
             return
